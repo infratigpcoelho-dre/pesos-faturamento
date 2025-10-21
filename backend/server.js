@@ -19,7 +19,7 @@ const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
 
 // COLE A SUA URL DE CONEXÃO DO RENDER AQUI!
 // Deve ser o link que começa com "postgres://..."
-const DATABASE_URL = 'postgres://patrick:SENHA_SECRETA@dpg-server-a.ohio-postgres.render.com/banco_pesagem_patrick'; 
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a/bdpesos'; 
 
 // CONFIGURA A CONEXÃO COM O POSTGRESQL
 const db = new Client({
