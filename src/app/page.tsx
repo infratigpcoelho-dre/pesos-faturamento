@@ -28,7 +28,7 @@ type Lancamento = {
 };
 
 const ITENS_POR_PAGINA = 10;
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);

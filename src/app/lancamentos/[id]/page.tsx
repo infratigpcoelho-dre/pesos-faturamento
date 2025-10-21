@@ -19,7 +19,7 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 // Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
