@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (CORRIGIDO)
+// Arquivo: src/app/login/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
 
 "use client";
 
@@ -34,9 +34,14 @@ export default function LoginPage() {
       localStorage.setItem('authToken', data.token);
       router.push('/');
 
-    } catch (error: any) {
+    } catch (error) { // AQUI ESTÁ A MUDANÇA (removemos o ': any')
       console.error("Falha no login:", error);
-      toast.error(error.message || "Falha no login. Verifique suas credenciais.");
+      let message = "Falha no login. Verifique suas credenciais.";
+      // Checamos se o 'error' é um objeto de Erro de verdade
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      toast.error(message);
     }
   };
 
@@ -59,24 +64,11 @@ export default function LoginPage() {
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="username">Usuário</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="seu.usuario"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <Input id="username" type="text" placeholder="seu.usuario" required value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button onClick={handleLogin} className="w-full">
             Entrar

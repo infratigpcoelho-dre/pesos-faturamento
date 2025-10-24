@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (VERSÃO FINAL COM CAMPO DE UPLOAD)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
 
 "use client";
 
@@ -8,11 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Definimos um tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 type LancamentoDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  // AQUI ESTÁ A MUDANÇA: onSave agora espera tipos específicos
   onSave: (data: FormData, arquivo: File | null) => void; 
   initialData?: FormData | null;
 };
@@ -52,11 +54,12 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   };
 
   const handleSubmit = () => {
+    // AQUI ESTÁ A MUDANÇA: Enviamos os dois argumentos, como esperado
     onSave(formData, arquivoNf);
   };
 
   const isEditing = !!initialData;
-  const currentFileName = (initialData as any)?.caminhoNf;
+  const currentFileName = (initialData as any)?.caminhoNf; // 'any' aqui é aceitável para um acesso dinâmico
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
