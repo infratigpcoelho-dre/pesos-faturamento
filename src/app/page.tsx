@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
+// Arquivo: src/app/page.tsx (TIPAGEM 100% CORRETA)
 
 "use client";
 
@@ -63,7 +63,7 @@ export default function Dashboard() {
     }
   }
 
-  // CORREÇÃO AQUI: Definimos os tipos corretos
+  // CORREÇÃO AQUI: Tipagem explícita dos parâmetros
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
     const url = isEditing ? `${API_URL}/lancamentos/${(lancamentoParaEditar as Lancamento).id}` : `${API_URL}/lancamentos`;
@@ -89,7 +89,7 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       carregarLancamentos();
 
-    } catch (error) { // CORREÇÃO AQUI
+    } catch (error: unknown) { // CORREÇÃO AQUI
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
       if (error instanceof Error) {
@@ -106,7 +106,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
-    } catch (error) { // CORREÇÃO AQUI
+    } catch (error: unknown) { // CORREÇÃO AQUI
       console.error("Erro ao deletar lançamento:", error);
       let message = "Não foi possível excluir o lançamento.";
       if (error instanceof Error) message = error.message;
@@ -120,7 +120,7 @@ export default function Dashboard() {
   };
   
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    setLancamentoParaEditar(lancamento); // O tipo Lancamento é compatível com o FormData
+    setLancamentoParaEditar(lancamento);
     setIsDialogOpen(true);
   };
 

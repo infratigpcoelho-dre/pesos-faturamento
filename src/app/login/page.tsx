@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
+// Arquivo: src/app/login/page.tsx (TIPAGEM 100% CORRETA)
 
 "use client";
 
@@ -34,7 +34,7 @@ export default function LoginPage() {
       localStorage.setItem('authToken', data.token);
       router.push('/');
 
-    } catch (error) { // CORREÇÃO AQUI
+    } catch (error: unknown) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
       console.error("Falha no login:", error);
       let message = "Falha no login. Verifique suas credenciais.";
       if (error instanceof Error) {
@@ -49,7 +49,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <Image
-            src="/LogoSF.png" // Assumindo que seu logo está correto
+            src="/LogoSF.png" 
             alt="Logo da Empresa"
             width={200}
             height={200}
