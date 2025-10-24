@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/app/login/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
 
 "use client";
 
@@ -18,6 +18,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
+      // ATENÇÃO: Confirme se esta é a URL correta do seu backend no Render
       const response = await fetch('https://api-pesagem-patrick.onrender.com/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,7 +35,7 @@ export default function LoginPage() {
       localStorage.setItem('authToken', data.token);
       router.push('/');
 
-    } catch (error: unknown) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
+    } catch (error) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
       console.error("Falha no login:", error);
       let message = "Falha no login. Verifique suas credenciais.";
       if (error instanceof Error) {
@@ -49,7 +50,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <Image
-            src="/LogoSF.png" 
+            src="/LogoSF.png" // Assumindo que seu logo está correto
             alt="Logo da Empresa"
             width={200}
             height={200}

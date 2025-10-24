@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
 
 "use client";
 
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Definimos um tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 // Definimos um tipo para os dados iniciais, que podem ter o caminhoNf
