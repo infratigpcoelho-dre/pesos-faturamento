@@ -63,10 +63,12 @@ export default function Dashboard() {
     }
   }
 
-  // CORREÇÃO AQUI: Definimos os tipos corretos
+  // CORREÇÃO AQUI: Tipagem explícita dos parâmetros
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    const url = isEditing ? `${API_URL}/lancamentos/${(lancamentoParaEditar as Lancamento).id}` : `${API_URL}/lancamentos`;
+    // Precisamos garantir que lancamentoParaEditar tem o ID
+    const idParaEditar = isEditing ? (lancamentoParaEditar as Lancamento).id : null; 
+    const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
     
     const formData = new FormData();
@@ -120,7 +122,7 @@ export default function Dashboard() {
   };
   
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    setLancamentoParaEditar(lancamento); // O tipo Lancamento é compatível com o FormData
+    setLancamentoParaEditar(lancamento);
     setIsDialogOpen(true);
   };
 

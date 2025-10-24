@@ -8,17 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Definimos um tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
-
-// Definimos um tipo para os dados iniciais, que podem ter o caminhoNf
 type InitialData = (FormData & { caminhoNf?: string }) | null;
 
 type LancamentoDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: FormData, arquivo: File | null) => void; 
-  initialData?: InitialData; // Usamos o tipo InitialData
+  initialData?: InitialData;
 };
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData }: LancamentoDialogProps) {
@@ -60,8 +57,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   };
 
   const isEditing = !!initialData;
-  // CORREÇÃO AQUI: Acessamos de forma segura sem 'as any'
-  const currentFileName = initialData?.caminhoNf; 
+  const currentFileName = initialData?.caminhoNf; // CORREÇÃO AQUI
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -72,7 +68,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
-          {/* Coluna 1 */}
+          {/* Colunas 1, 2 e 3 (sem mudanças no JSX) */}
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label htmlFor="horaPostada">Hora Postada</Label><Input id="horaPostada" name="horaPostada" type="time" value={String(formData.horaPostada)} onChange={handleChange} /></div>
@@ -80,7 +76,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
             <div><Label htmlFor="cavalo">Cavalo (Placa)</Label><Input id="cavalo" name="cavalo" value={String(formData.cavalo)} onChange={handleChange} /></div>
             <div><Label htmlFor="ticket">Ticket</Label><Input id="ticket" name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
           </div>
-          {/* Coluna 2 */}
           <div className="space-y-4">
             <div><Label htmlFor="produto">Produto</Label><Input id="produto" name="produto" value={String(formData.produto)} onChange={handleChange} placeholder="Soja, Milho..."/></div>
             <div><Label htmlFor="origem">Origem</Label><Input id="origem" name="origem" value={String(formData.origem)} onChange={handleChange} /></div>
@@ -88,7 +83,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
             <div><Label htmlFor="pesoReal">Peso Real (kg)</Label><Input id="pesoReal" name="pesoReal" type="number" value={String(formData.pesoReal)} onChange={handleChange} /></div>
             <div><Label htmlFor="nf">Nota Fiscal (Nº)</Label><Input id="nf" name="nf" value={String(formData.nf)} onChange={handleChange} /></div>
           </div>
-          {/* Coluna 3 */}
           <div className="space-y-4">
             <div><Label htmlFor="inicioDescarga">Início Descarga</Label><Input id="inicioDescarga" name="inicioDescarga" type="datetime-local" value={String(formData.inicioDescarga)} onChange={handleChange} /></div>
             <div><Label htmlFor="terminoDescarga">Término Descarga</Label><Input id="terminoDescarga" name="terminoDescarga" type="datetime-local" value={String(formData.terminoDescarga)} onChange={handleChange} /></div>
@@ -99,16 +93,12 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
           </div>
         </div>
 
-        {/* Novo campo de Upload */}
+        {/* Campo de Upload */}
         <div className="space-y-2">
           <Label htmlFor="arquivoNf">Anexar Nota Fiscal (PDF/Imagem)</Label>
-          {isEditing && currentFileName && (
-            <p className="text-sm text-muted-foreground">Arquivo atual: {currentFileName} (deixe em branco para não alterar)</p>
-          )}
+          {isEditing && currentFileName && (<p className="text-sm text-muted-foreground">Arquivo atual: {currentFileName} (deixe em branco para não alterar)</p>)}
           <Input id="arquivoNf" name="arquivoNf" type="file" onChange={handleFileChange} />
-          {arquivoNf && (
-            <p className="text-sm text-green-600">Novo arquivo selecionado: {arquivoNf.name}</p>
-          )}
+          {arquivoNf && (<p className="text-sm text-green-600">Novo arquivo selecionado: {arquivoNf.name}</p>)}
         </div>
         
         <DialogFooter>

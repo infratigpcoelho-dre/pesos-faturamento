@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/login`, { // Corrigido para usar API_URL
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -37,7 +37,7 @@ export default function LoginPage() {
       localStorage.setItem('authToken', data.token);
       router.push('/');
 
-    } catch (error) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
+    } catch (error: unknown) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
       console.error("Falha no login:", error);
       let message = "Falha no login. Verifique suas credenciais.";
       if (error instanceof Error) {
