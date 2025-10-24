@@ -1,10 +1,10 @@
-// Arquivo: src/app/page.tsx (FINAL COM LINK PARA DETALHES)
+// Arquivo: src/app/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
 
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // 1. IMPORTAMOS O 'Link' DO NEXT.JS
+import Link from "next/link";
 import { MoreHorizontal, Pencil, Trash2, PlusCircle, FileDown, LogOut, Link as LinkIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,8 +27,12 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
+// Definimos o tipo para os dados do formulário
+type FormData = { [key: string]: string | number; };
+
 const ITENS_POR_PAGINA = 10;
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
+// ATENÇÃO: SUBSTITUA PELA SUA URL DO RENDER
+const API_URL = 'https://api-pesagem-patrick.onrender.com'; 
 
 export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -59,14 +63,15 @@ export default function Dashboard() {
     }
   }
 
-  const handleSalvar = async (dadosDoFormulario: any, arquivo: File | null) => {
+  // CORREÇÃO AQUI: Definimos os tipos corretos
+  const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    const url = isEditing ? `${API_URL}/lancamentos/${lancamentoParaEditar.id}` : `${API_URL}/lancamentos`;
+    const url = isEditing ? `${API_URL}/lancamentos/${(lancamentoParaEditar as Lancamento).id}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
     
     const formData = new FormData();
     Object.keys(dadosDoFormulario).forEach(key => {
-      formData.append(key, dadosDoFormulario[key]);
+      formData.append(key, String(dadosDoFormulario[key]));
     });
     if (arquivo) {
       formData.append('arquivoNf', arquivo);
@@ -84,9 +89,13 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       carregarLancamentos();
 
-    } catch (error) {
+    } catch (error) { // CORREÇÃO AQUI
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
-      toast.error(`Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`);
+      let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      toast.error(message);
     }
   };
   
@@ -97,9 +106,11 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
-    } catch (error) {
+    } catch (error) { // CORREÇÃO AQUI
       console.error("Erro ao deletar lançamento:", error);
-      toast.error("Não foi possível excluir o lançamento.");
+      let message = "Não foi possível excluir o lançamento.";
+      if (error instanceof Error) message = error.message;
+      toast.error(message);
     }
   };
 
@@ -109,7 +120,7 @@ export default function Dashboard() {
   };
   
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    setLancamentoParaEditar(lancamento);
+    setLancamentoParaEditar(lancamento); // O tipo Lancamento é compatível com o FormData
     setIsDialogOpen(true);
   };
 
@@ -250,7 +261,6 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell>{new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
                     
-                    {/* 2. CÉLULA DO TICKET TRANSFORMADA EM LINK */}
                     <TableCell className="font-medium">
                       <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
                         {lancamento.ticket}

@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://localhost:3001/login', {
+      const response = await fetch('https://api-pesagem-patrick.onrender.com/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -34,10 +34,9 @@ export default function LoginPage() {
       localStorage.setItem('authToken', data.token);
       router.push('/');
 
-    } catch (error) { // AQUI ESTÁ A MUDANÇA (removemos o ': any')
+    } catch (error) { // CORREÇÃO AQUI
       console.error("Falha no login:", error);
       let message = "Falha no login. Verifique suas credenciais.";
-      // Checamos se o 'error' é um objeto de Erro de verdade
       if (error instanceof Error) {
         message = error.message;
       }
