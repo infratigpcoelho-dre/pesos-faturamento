@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
+// Arquivo: src/app/login/page.tsx (TIPAGEM 100% CORRETA)
 
 "use client";
 
@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+// ATENÇÃO: Confirme se esta é a URL correta do seu backend no Render
+const API_URL = 'https://api-pesagem-patrick.onrender.com'; 
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +21,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      // ATENÇÃO: Confirme se esta é a URL correta do seu backend no Render
-      const response = await fetch('https://api-pesagem-patrick.onrender.com/login', {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (VERSÃO FINAL COM TIPAGEM CORRETA)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (TIPAGEM 100% CORRETA)
 
 "use client";
 
