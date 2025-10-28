@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE RUNTIME E TIPO)
+// Arquivo: src/app/page.tsx (CORRIGIDO PARA VALORES NULOS)
 
 "use client";
 

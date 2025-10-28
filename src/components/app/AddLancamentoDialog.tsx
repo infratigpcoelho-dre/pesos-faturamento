@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA VALORES NULOS)
 
 "use client";
 
@@ -9,16 +9,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type FormData = { [key: string]: string | number; };
-
-// Definimos um tipo para os dados iniciais, que podem ter o caminhoNf
 type InitialData = (FormData & { caminhoNf?: string }) | null;
 
 type LancamentoDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: FormData, arquivo: File | null) => void; 
-  initialData?: InitialData; // Usamos o tipo InitialData
+  initialData?: InitialData;
 };
+
+// Função para formatar a data para o input datetime-local
+const formatarParaDateTimeLocal = (dataString: string | number) => {
+  if (!dataString) return "";
+  try {
+    const data = new Date(dataString);
+    // Ajusta para o fuso horário local e formata
+    const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
+    return dataLocal.toISOString().slice(0, 16);
+  } catch (e) {
+    return ""; // Retorna vazio se a data for inválida
+  }
+}
+
+// Função para formatar a data para o input date
+const formatarParaDate = (dataString: string | number) => {
+  if (!dataString) return "";
+  try {
+    const data = new Date(dataString);
+    return data.toISOString().split('T')[0];
+  } catch (e) {
+    return "";
+  }
+}
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData }: LancamentoDialogProps) {
   const getInitialState = () => ({
@@ -33,7 +55,20 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setFormData(initialData);
+        // CORRIGIDO: Garante que os valores nulos sejam convertidos para string vazia
+        const dadosCorrigidos = { ...initialData };
+        dadosCorrigidos.data = formatarParaDate(initialData.data);
+        dadosCorrigidos.inicioDescarga = formatarParaDateTimeLocal(initialData.inicioDescarga);
+        dadosCorrigidos.terminoDescarga = formatarParaDateTimeLocal(initialData.terminoDescarga);
+        
+        // Converte outros nulos para vazio
+        Object.keys(dadosCorrigidos).forEach(key => {
+          if (dadosCorrigidos[key as keyof typeof dadosCorrigidos] === null) {
+            dadosCorrigidos[key as keyof typeof dadosCorrigidos] = "";
+          }
+        });
+        
+        setFormData(dadosCorrigidos);
       } else {
         setFormData(getInitialState());
       }
@@ -59,8 +94,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   };
 
   const isEditing = !!initialData;
-  // CORREÇÃO AQUI: Acessamos de forma segura sem 'as any'
-  const currentFileName = initialData?.caminhoNf; 
+  const currentFileName = initialData?.caminhoNf;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -71,7 +105,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
-          {/* Colunas 1, 2 e 3 (sem mudanças no JSX) */}
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label htmlFor="horaPostada">Hora Postada</Label><Input id="horaPostada" name="horaPostada" type="time" value={String(formData.horaPostada)} onChange={handleChange} /></div>
@@ -95,15 +128,12 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
             <div><Label htmlFor="obs">Observação</Label><Input id="obs" name="obs" value={String(formData.obs)} onChange={handleChange} /></div>
           </div>
         </div>
-
-        {/* Novo campo de Upload */}
         <div className="space-y-2">
           <Label htmlFor="arquivoNf">Anexar Nota Fiscal (PDF/Imagem)</Label>
           {isEditing && currentFileName && (<p className="text-sm text-muted-foreground">Arquivo atual: {currentFileName} (deixe em branco para não alterar)</p>)}
           <Input id="arquivoNf" name="arquivoNf" type="file" onChange={handleFileChange} />
           {arquivoNf && (<p className="text-sm text-green-600">Novo arquivo selecionado: {arquivoNf.name}</p>)}
         </div>
-        
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit}>Salvar</Button>
         </DialogFooter>
