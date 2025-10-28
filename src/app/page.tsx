@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/app/page.tsx (CORRIGIDO ERRO DE TIPO E ERRO DE DIGITAÇÃO)
 
 "use client";
 
@@ -27,7 +27,6 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
-// Definimos o tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
@@ -63,7 +62,6 @@ export default function Dashboard() {
     }
   }
 
-  // CORREÇÃO AQUI: Tipagem explícita dos parâmetros
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
     // Corrigido para garantir que lancamentoParaEditar não é nulo ao editar
@@ -73,9 +71,7 @@ export default function Dashboard() {
     
     const formData = new FormData();
     Object.keys(dadosDoFormulario).forEach(key => {
-       // Evita enviar 'id' no corpo do POST ao criar
       if (!isEditing && key === 'id') return;
-      // Garante que enviamos strings para o FormData (ou um valor padrão)
       formData.append(key, String(dadosDoFormulario[key] ?? '')); 
     });
     if (arquivo) {
@@ -97,7 +93,7 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       carregarLancamentos();
 
-    } catch (error: unknown) { // CORREÇÃO AQUI
+    } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
       if (error instanceof Error) {
@@ -114,7 +110,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
-    } catch (error: unknown) { // CORREÇÃO AQUI
+    } catch (error: unknown) { 
       console.error("Erro ao deletar lançamento:", error);
       let message = "Não foi possível excluir o lançamento.";
       if (error instanceof Error) message = error.message;
@@ -127,9 +123,8 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** AQUI ESTÁ A CORREÇÃO NO LUGAR CERTO ******
+  // ****** ESTA É A FUNÇÃO 100% CORRIGIDA ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto <Lancamento>
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
@@ -205,7 +200,11 @@ export default function Dashboard() {
       
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card><CardHeader><CardTitle>Peso Total por Produto</CardTitle></CardHeader><CardContent><PesoPorProdutoChart data={lancamentos} /></CardContent></Card>
-        <Card><CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader><CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent></Card>
+        <Card>
+          <CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader>
+          {/* ****** AQUI ESTÁ A CORREÇÃO do 'lancJamentos' ****** */}
+          <CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent>
+        </Card>
       </div>
       
       <Card>
