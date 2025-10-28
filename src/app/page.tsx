@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORRIGIDO ERRO DE TIPO E ERRO DE DIGITAÇÃO)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA DE TIPO)
 
 "use client";
 
@@ -64,7 +64,6 @@ export default function Dashboard() {
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    // Corrigido para garantir que lancamentoParaEditar não é nulo ao editar
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
     const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
@@ -79,26 +78,18 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch(url, {
-        method: method,
-        body: formData, 
-      });
-
+      const response = await fetch(url, { method: method, body: formData });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})); 
         throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
       }
-      
       toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
       carregarLancamentos();
-
     } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
-      if (error instanceof Error) {
-        message = error.message;
-      }
+      if (error instanceof Error) message = error.message;
       toast.error(message);
     }
   };
@@ -123,12 +114,10 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** ESTA É A FUNÇÃO 100% CORRIGIDA ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
-  // ****** FIM DA CORREÇÃO ******
 
   const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPaginaAtual(1);
@@ -200,11 +189,7 @@ export default function Dashboard() {
       
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card><CardHeader><CardTitle>Peso Total por Produto</CardTitle></CardHeader><CardContent><PesoPorProdutoChart data={lancamentos} /></CardContent></Card>
-        <Card>
-          <CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader>
-          {/* ****** AQUI ESTÁ A CORREÇÃO do 'lancJamentos' ****** */}
-          <CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent>
-        </Card>
+        <Card><CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader><CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent></Card>
       </div>
       
       <Card>
