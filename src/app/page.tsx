@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA DE TIPO)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA DE TIPO - AGORA VAI!)
 
 "use client";
 
@@ -53,7 +53,10 @@ export default function Dashboard() {
 
   async function carregarLancamentos() {
     try {
-      const response = await fetch(`${API_URL}/lancamentos`);
+      // Adiciona header de autorização se necessário (não implementado no backend ainda)
+      // const token = localStorage.getItem('authToken');
+      // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_URL}/lancamentos` /*, { headers }*/);
       if (!response.ok) throw new Error('Falha ao buscar dados da API');
       const data = await response.json();
       setLancamentos(data);
@@ -82,8 +85,12 @@ export default function Dashboard() {
     }
 
     try {
+      // Adiciona header de autorização se necessário
+      // const token = localStorage.getItem('authToken');
+      // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const response = await fetch(url, {
         method: method,
+        // headers: headers, // Headers não são necessários com FormData (o navegador define)
         body: formData, 
       });
 
@@ -94,7 +101,7 @@ export default function Dashboard() {
       
       toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
-      carregarLancamentos();
+      carregarLancamentos(); // Recarrega a lista após salvar/editar
 
     } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
@@ -109,7 +116,13 @@ export default function Dashboard() {
   const handleDeletarLancamento = async (idParaDeletar: number) => {
     if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
     try {
-      const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { method: 'DELETE' });
+      // Adiciona header de autorização se necessário
+      // const token = localStorage.getItem('authToken');
+      // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
+        method: 'DELETE'
+        /*, headers */ 
+      });
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
@@ -126,9 +139,9 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** ESTA É A FUNÇÃO CORRIGIDA ******
+  // ****** ESTA É A FUNÇÃO 100% CORRIGIDA ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto <Lancamento>
+    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo <Lancamento>
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
@@ -142,7 +155,8 @@ export default function Dashboard() {
   
   const handleExportCSV = () => {
     if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
-    const csv = Papa.unparse(lancamentosFiltrados);
+    // Inclui todas as colunas no CSV
+    const csv = Papa.unparse(lancamentosFiltrados); 
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -152,16 +166,17 @@ export default function Dashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Os dados foram exportados com sucesso!");
+    toast.success("Os dados filtrados foram exportados para CSV com sucesso!");
   };
 
   const handleExportXLSX = () => {
     if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
+     // Inclui todas as colunas no XLSX
     const worksheet = XLSX.utils.json_to_sheet(lancamentosFiltrados);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos");
     XLSX.writeFile(workbook, `lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success("Os dados foram exportados para Excel com sucesso!");
+    toast.success("Os dados filtrados foram exportados para Excel com sucesso!");
   };
   
   const handleLogout = () => {
