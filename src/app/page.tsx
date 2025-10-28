@@ -114,7 +114,6 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // CORRIGIDO O ERRO DE TIPO
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
@@ -255,18 +254,20 @@ export default function Dashboard() {
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>{new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</TableCell>
+                    {/* BLINDADO CONTRA DATAS NULAS */}
+                    <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
                     
                     <TableCell className="font-medium">
                       <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
-                        {lancamento.ticket}
+                        {lancamento.ticket || '-'}
                       </Link>
                     </TableCell>
 
-                    <TableCell>{lancamento.motorista}</TableCell>
-                    <TableCell>{lancamento.produto}</TableCell>
-                    <TableCell>{lancamento.origem}</TableCell>
-                    <TableCell>{lancamento.destino}</TableCell>
+                    <TableCell>{lancamento.motorista || '-'}</TableCell>
+                    <TableCell>{lancamento.produto || '-'}</TableCell>
+                    <TableCell>{lancamento.origem || '-'}</TableCell>
+                    <TableCell>{lancamento.destino || '-'}</TableCell>
+                    
                     {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
                     <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
                     <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
