@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE TIPO)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE TIPO NA FUNÇÃO CORRETA)
 
 "use client";
 
@@ -64,14 +64,17 @@ export default function Dashboard() {
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    const url = isEditing ? `${API_URL}/lancamentos/${(lancamentoParaEditar as Lancamento).id}` : `${API_URL}/lancamentos`;
+    // Precisamos garantir que lancamentoParaEditar tem o ID ao editar
+    const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
+    const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
     
     const formData = new FormData();
     Object.keys(dadosDoFormulario).forEach(key => {
-      // Garante que o ID não seja enviado no corpo ao criar
+       // Evita enviar 'id' no corpo do POST ao criar
       if (!isEditing && key === 'id') return;
-      formData.append(key, String(dadosDoFormulario[key]));
+      // Garante que enviamos strings para o FormData
+      formData.append(key, String(dadosDoFormulario[key] ?? '')); 
     });
     if (arquivo) {
       formData.append('arquivoNf', arquivo);
@@ -84,7 +87,6 @@ export default function Dashboard() {
       });
 
       if (!response.ok) {
-        // Tenta pegar a mensagem de erro do backend, se houver
         const errorData = await response.json().catch(() => ({})); 
         throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
       }
@@ -123,7 +125,7 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** AQUI ESTÁ A CORREÇÃO ******
+  // ****** AQUI ESTÁ A CORREÇÃO NO LUGAR CERTO ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
     // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto
     setLancamentoParaEditar(lancamento); 
