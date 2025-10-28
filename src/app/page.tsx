@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE TIPO NA FUNÇÃO CORRETA)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA DE TIPO)
 
 "use client";
 
@@ -27,6 +27,7 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
+// Definimos o tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
@@ -64,7 +65,7 @@ export default function Dashboard() {
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    // Precisamos garantir que lancamentoParaEditar tem o ID ao editar
+    // Corrigido para garantir que lancamentoParaEditar não é nulo ao editar
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
     const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
@@ -73,7 +74,7 @@ export default function Dashboard() {
     Object.keys(dadosDoFormulario).forEach(key => {
        // Evita enviar 'id' no corpo do POST ao criar
       if (!isEditing && key === 'id') return;
-      // Garante que enviamos strings para o FormData
+      // Garante que enviamos strings para o FormData (ou um valor padrão)
       formData.append(key, String(dadosDoFormulario[key] ?? '')); 
     });
     if (arquivo) {
@@ -125,9 +126,9 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** AQUI ESTÁ A CORREÇÃO NO LUGAR CERTO ******
+  // ****** ESTA É A FUNÇÃO CORRIGIDA ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto
+    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto <Lancamento>
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
