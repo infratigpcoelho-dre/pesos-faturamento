@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA DE TIPO)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE RUNTIME E TIPO)
 
 "use client";
 
@@ -27,11 +27,10 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
-// Definimos o tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-// ATENÇÃO: SUBSTITUA PELA SUA URL DO RENDER
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -65,16 +64,13 @@ export default function Dashboard() {
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    // Corrigido para garantir que lancamentoParaEditar não é nulo ao editar
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
     const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
     
     const formData = new FormData();
     Object.keys(dadosDoFormulario).forEach(key => {
-       // Evita enviar 'id' no corpo do POST ao criar
       if (!isEditing && key === 'id') return;
-      // Garante que enviamos strings para o FormData (ou um valor padrão)
       formData.append(key, String(dadosDoFormulario[key] ?? '')); 
     });
     if (arquivo) {
@@ -82,26 +78,18 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch(url, {
-        method: method,
-        body: formData, 
-      });
-
+      const response = await fetch(url, { method: method, body: formData });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})); 
         throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
       }
-      
       toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
       carregarLancamentos();
-
     } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
-      if (error instanceof Error) {
-        message = error.message;
-      }
+      if (error instanceof Error) message = error.message;
       toast.error(message);
     }
   };
@@ -126,13 +114,11 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
-  // ****** ESTA É A FUNÇÃO 100% CORRIGIDA ******
+  // CORRIGIDO O ERRO DE TIPO
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto <Lancamento>
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
-  // ****** FIM DA CORREÇÃO ******
 
   const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPaginaAtual(1);
@@ -281,6 +267,7 @@ export default function Dashboard() {
                     <TableCell>{lancamento.produto}</TableCell>
                     <TableCell>{lancamento.origem}</TableCell>
                     <TableCell>{lancamento.destino}</TableCell>
+                    {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
                     <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
                     <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
                   </TableRow>
