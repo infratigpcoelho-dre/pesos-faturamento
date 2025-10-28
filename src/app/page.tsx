@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DE TIPO)
 
 "use client";
 
@@ -27,7 +27,6 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
-// Definimos o tipo para os dados do formulário
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
@@ -63,16 +62,15 @@ export default function Dashboard() {
     }
   }
 
-  // CORREÇÃO AQUI: Tipagem explícita dos parâmetros
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
-    // Precisamos garantir que lancamentoParaEditar tem o ID
-    const idParaEditar = isEditing ? (lancamentoParaEditar as Lancamento).id : null; 
-    const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
+    const url = isEditing ? `${API_URL}/lancamentos/${(lancamentoParaEditar as Lancamento).id}` : `${API_URL}/lancamentos`;
     const method = isEditing ? 'PUT' : 'POST';
     
     const formData = new FormData();
     Object.keys(dadosDoFormulario).forEach(key => {
+      // Garante que o ID não seja enviado no corpo ao criar
+      if (!isEditing && key === 'id') return;
       formData.append(key, String(dadosDoFormulario[key]));
     });
     if (arquivo) {
@@ -85,13 +83,17 @@ export default function Dashboard() {
         body: formData, 
       });
 
-      if (!response.ok) throw new Error(`Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
+      if (!response.ok) {
+        // Tenta pegar a mensagem de erro do backend, se houver
+        const errorData = await response.json().catch(() => ({})); 
+        throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
+      }
       
       toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
       carregarLancamentos();
 
-    } catch (error: unknown) { // CORREÇÃO AQUI
+    } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
       if (error instanceof Error) {
@@ -108,7 +110,7 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
-    } catch (error: unknown) { // CORREÇÃO AQUI
+    } catch (error: unknown) { 
       console.error("Erro ao deletar lançamento:", error);
       let message = "Não foi possível excluir o lançamento.";
       if (error instanceof Error) message = error.message;
@@ -121,10 +123,13 @@ export default function Dashboard() {
     setIsDialogOpen(true);
   };
   
+  // ****** AQUI ESTÁ A CORREÇÃO ******
   const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    setLancamentoParaEditar(lancamento);
+    // Passamos o 'lancamento' diretamente, pois ele já tem o tipo correto
+    setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
+  // ****** FIM DA CORREÇÃO ******
 
   const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPaginaAtual(1);
