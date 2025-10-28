@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 // ATENÇÃO: Confirme se esta é a URL correta do seu backend no Render
-const API_URL = 'https://api-pesagem-patrick.onrender.com'; 
+const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch(`${API_URL}/login`, { // Corrigido para usar API_URL
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
