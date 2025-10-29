@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORRIGIDO PARA VALORES NULOS)
+// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
 
 "use client";
 
@@ -30,7 +30,6 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -254,7 +253,6 @@ export default function Dashboard() {
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    {/* BLINDADO CONTRA DATAS NULAS */}
                     <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
                     
                     <TableCell className="font-medium">
