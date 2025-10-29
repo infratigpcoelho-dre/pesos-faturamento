@@ -73,7 +73,7 @@ export default function LancamentoDetalhePage() {
     carregarDetalhes();
   }, [id, router]);
 
-  const formatarDataHora = (dataString: string) => {
+  const formatarDataHora = (dataString: string) | null => {
     if (!dataString) return '-';
     try {
       if (dataString.includes('T')) {
@@ -128,7 +128,7 @@ export default function LancamentoDetalhePage() {
         <CardHeader><CardTitle>Financeiro e Documentos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetalheItem icon={FileText} label="Nº da Nota Fiscal" value={lancamento.nf} />
-          {/* CORREÇÃO AQUI: Verifica se o peso real existe */}
+          {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
           <DetalheItem icon={DollarSign} label="Peso Real" value={`${(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg`} />
           <DetalheItem icon={DollarSign} label="Tarifa" value={lancamento.tarifa} isCurrency={true} />
           <DetalheItem icon={DollarSign} label="Valor Frete" value={lancamento.valorFrete} isCurrency={true} />
