@@ -45,7 +45,7 @@ export function PesoPorProdutoChart({ data }: PesoPorProdutoChartProps) {
         />
         <Tooltip
           cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: unknown) => {
+          formatter={(value: unknown) => { // Aceita 'unknown'
             const valorNumerico = Number(value) || 0;
             return [`${(valorNumerico / 1000).toLocaleString('pt-BR')} t`, 'Peso Total'];
           }}

@@ -24,10 +24,11 @@ const formatarParaDateTimeLocal = (dataString: string | number | null | undefine
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
+    // Ajusta para o fuso horário local e formata
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
   } catch (e) {
-    return "";
+    return ""; // Retorna vazio se a data for inválida
   }
 }
 
@@ -55,8 +56,8 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
+        // CORRIGIDO: Garante que os valores nulos sejam convertidos para string vazia
         const dadosCorrigidos: FormData = { ...initialData };
-        // Garante que os valores de data/hora nulos sejam convertidos para string vazia
         dadosCorrigidos.data = formatarParaDate(initialData.data);
         dadosCorrigidos.inicioDescarga = formatarParaDateTimeLocal(initialData.inicioDescarga);
         dadosCorrigidos.terminoDescarga = formatarParaDateTimeLocal(initialData.terminoDescarga);

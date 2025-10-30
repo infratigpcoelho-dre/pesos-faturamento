@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINALÍSSIMA)
+// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
 
 "use client";
 
@@ -30,7 +30,7 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-// ATENÇÃO: SUBSTITUA PELA SUA URL DO RENDER
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -156,6 +156,7 @@ export default function Dashboard() {
   };
 
   const formatarMoeda = (valor: number) => {
+    // Blindado contra nulos
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
@@ -264,6 +265,7 @@ export default function Dashboard() {
                     <TableCell>{lancamento.produto || '-'}</TableCell>
                     <TableCell>{lancamento.origem || '-'}</TableCell>
                     <TableCell>{lancamento.destino || '-'}</TableCell>
+                    {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
                     <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
                     <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
                   </TableRow>
