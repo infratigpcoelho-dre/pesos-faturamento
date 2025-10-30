@@ -33,6 +33,7 @@ export function CarregamentosPorDiaChart({ data }: CarregamentosPorDiaChartProps
       // CORREÇÃO AQUI: Lida com "Sem Data" na ordenação
       if (a.data === 'Sem Data') return 1;
       if (b.data === 'Sem Data') return -1;
+      // Garante que o formato da data 'dd/mm/aaaa' seja convertido para 'aaaa-mm-dd' para ordenação
       const dateA = new Date(a.data.split('/').reverse().join('-')).getTime();
       const dateB = new Date(b.data.split('/').reverse().join('-')).getTime();
       return dateA - dateB;

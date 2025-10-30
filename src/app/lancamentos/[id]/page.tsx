@@ -73,7 +73,7 @@ export default function LancamentoDetalhePage() {
     carregarDetalhes();
   }, [id, router]);
 
-  const formatarDataHora = (dataString: string) | null => {
+  const formatarDataHora = (dataString: string | null) => {
     if (!dataString) return '-';
     try {
       if (dataString.includes('T')) {
