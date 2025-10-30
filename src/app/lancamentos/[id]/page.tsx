@@ -1,4 +1,4 @@
-// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA DADOS NULOS)
+// Arquivo: src/app/lancamentos/[id]/page.tsx (O CÓDIGO CORRETO PARA ESTE ARQUIVO)
 
 "use client";
 
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Link as LinkIcon, Calendar, Clock, Truck, Box, MapPin, CheckSquare, FileText, DollarSign, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Importando o Label que faltava
 
+// Recriamos o tipo para esta página
 type Lancamento = {
   id: number; data: string; horaPostada: string; origem: string; destino: string;
   inicioDescarga: string; terminoDescarga: string; tempoDescarga: string;
@@ -19,13 +20,14 @@ type Lancamento = {
   caminhoNf?: string;
 };
 
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
+// ATENÇÃO: SUBSTITUA PELA SUA URL DO RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 // Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
-  let displayValue = value ?? '-';
+  let displayValue = value ?? '-'; // Usa '-' se for null ou undefined
   
+  // CORREÇÃO AQUI: Garante que 'value' é um número antes de formatar
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
   }
