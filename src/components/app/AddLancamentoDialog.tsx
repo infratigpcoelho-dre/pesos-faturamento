@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type FormData = { [key: string]: string | number; };
-type InitialData = (FormData & { caminhoNf?: string }) | null;
+type InitialData = (FormData & { caminhoNf?: string; inicioDescarga?: string | null; terminoDescarga?: string | null; data?: string | null; }) | null;
+
 
 type LancamentoDialogProps = {
   isOpen: boolean;
@@ -19,20 +20,19 @@ type LancamentoDialogProps = {
 };
 
 // Função para formatar a data para o input datetime-local
-const formatarParaDateTimeLocal = (dataString: string | number) => {
+const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
-    // Ajusta para o fuso horário local e formata
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
   } catch (e) {
-    return ""; // Retorna vazio se a data for inválida
+    return "";
   }
 }
 
 // Função para formatar a data para o input date
-const formatarParaDate = (dataString: string | number) => {
+const formatarParaDate = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
@@ -55,13 +55,12 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // CORRIGIDO: Garante que os valores nulos sejam convertidos para string vazia
-        const dadosCorrigidos = { ...initialData };
+        const dadosCorrigidos: FormData = { ...initialData };
+        // Garante que os valores de data/hora nulos sejam convertidos para string vazia
         dadosCorrigidos.data = formatarParaDate(initialData.data);
         dadosCorrigidos.inicioDescarga = formatarParaDateTimeLocal(initialData.inicioDescarga);
         dadosCorrigidos.terminoDescarga = formatarParaDateTimeLocal(initialData.terminoDescarga);
         
-        // Converte outros nulos para vazio
         Object.keys(dadosCorrigidos).forEach(key => {
           if (dadosCorrigidos[key as keyof typeof dadosCorrigidos] === null) {
             dadosCorrigidos[key as keyof typeof dadosCorrigidos] = "";

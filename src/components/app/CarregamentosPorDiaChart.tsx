@@ -14,7 +14,6 @@ type CarregamentosPorDiaChartProps = {
 
 export function CarregamentosPorDiaChart({ data }: CarregamentosPorDiaChartProps) {
   const dadosProcessados = data.reduce((acc, lancamento) => {
-    // CORREÇÃO AQUI: Garante que a data não é nula
     const dataFormatada = lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'Sem Data';
     
     if (!acc[dataFormatada]) {
@@ -30,10 +29,8 @@ export function CarregamentosPorDiaChart({ data }: CarregamentosPorDiaChartProps
       carregamentos: dadosProcessados[data],
     }))
     .sort((a, b) => {
-      // CORREÇÃO AQUI: Lida com "Sem Data" na ordenação
       if (a.data === 'Sem Data') return 1;
       if (b.data === 'Sem Data') return -1;
-      // Garante que o formato da data 'dd/mm/aaaa' seja convertido para 'aaaa-mm-dd' para ordenação
       const dateA = new Date(a.data.split('/').reverse().join('-')).getTime();
       const dateB = new Date(b.data.split('/').reverse().join('-')).getTime();
       return dateA - dateB;
