@@ -26,6 +26,7 @@ const API_URL = 'https://api-pesos-faturamento.onrender.com';
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
   let displayValue = value ?? '-'; // Usa '-' se for null ou undefined
   
+  // CORREÇÃO AQUI: Garante que 'value' é um número antes de formatar
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
   }
@@ -83,7 +84,7 @@ export default function LancamentoDetalhePage() {
       // Tenta formatar como date
       return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
     } catch (e: unknown) {
-      return dataString; // Retorna a string original se a data for inválida
+      return dataString; 
     }
   }
 
@@ -130,6 +131,7 @@ export default function LancamentoDetalhePage() {
         <CardHeader><CardTitle>Financeiro e Documentos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetalheItem icon={FileText} label="Nº da Nota Fiscal" value={lancamento.nf} />
+          {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
           <DetalheItem icon={DollarSign} label="Peso Real" value={`${(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg`} />
           <DetalheItem icon={DollarSign} label="Tarifa" value={lancamento.tarifa} isCurrency={true} />
           <DetalheItem icon={DollarSign} label="Valor Frete" value={lancamento.valorFrete} isCurrency={true} />

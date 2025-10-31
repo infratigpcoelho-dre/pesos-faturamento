@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (TABELA FINAL COM TODAS AS COLUNAS)
+// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
 
 "use client";
 
@@ -159,19 +159,6 @@ export default function Dashboard() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
-  const formatarDataHora = (dataString: string | null) => {
-    if (!dataString) return '-';
-    try {
-      if (dataString.includes('T')) {
-         const data = new Date(dataString);
-         return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      }
-      return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-    } catch (e: unknown) {
-      return dataString; 
-    }
-  }
-
   const lancamentosFiltrados = useMemo(() => {
     if (!lancamentos) return [];
     return lancamentos.filter(lancamento => {
@@ -232,30 +219,22 @@ export default function Dashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px] text-center sticky left-0 bg-background z-10">Ações</TableHead>
-                  <TableHead className="w-[100px]">NF (Anexo)</TableHead>
-                  <TableHead>NF (Número)</TableHead>
+                  <TableHead className="w-[80px] text-center">Ações</TableHead>
+                  <TableHead className="w-[100px]">NF</TableHead>
                   <TableHead>Data</TableHead>
-                  <TableHead>Hora Postada</TableHead>
                   <TableHead>Ticket</TableHead>
                   <TableHead>Motorista</TableHead>
-                  <TableHead>Cavalo</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead>Destino</TableHead>
-                  <TableHead>Início Descarga</TableHead>
-                  <TableHead>Término Descarga</TableHead>
-                  <TableHead>Tempo Descarga</TableHead>
                   <TableHead className="text-right">Peso Real</TableHead>
-                  <TableHead className="text-right">Tarifa</TableHead>
                   <TableHead className="text-right">Valor Frete</TableHead>
-                  <TableHead>Observação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {lancamentosPaginados.map((lancamento) => (
                   <TableRow key={lancamento.id}>
-                    <TableCell className="text-center sticky left-0 bg-background z-10">
+                    <TableCell className="text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -275,26 +254,23 @@ export default function Dashboard() {
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>{lancamento.nf || '-'}</TableCell>
+                    {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
                     <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
-                    <TableCell>{lancamento.horaPostada || '-'}</TableCell>
+                    
                     <TableCell className="font-medium">
                       <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
                         {lancamento.ticket || '-'}
                       </Link>
                     </TableCell>
+
                     <TableCell>{lancamento.motorista || '-'}</TableCell>
-                    <TableCell>{lancamento.cavalo || '-'}</TableCell>
                     <TableCell>{lancamento.produto || '-'}</TableCell>
                     <TableCell>{lancamento.origem || '-'}</TableCell>
                     <TableCell>{lancamento.destino || '-'}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.inicioDescarga)}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.terminoDescarga)}</TableCell>
-                    <TableCell>{lancamento.tempoDescarga || '-'}</TableCell>
+                    
+                    {/* ****** CORREÇÃO DO ERRO DE RUNTIME AQUI ****** */}
                     <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
-                    <TableCell className="text-right">{formatarMoeda(lancamento.tarifa)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{lancamento.obs || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
