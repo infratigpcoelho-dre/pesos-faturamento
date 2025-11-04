@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm">
             Não consegue acessar?{" "}
             <a
-              href="https://wa.me/55996908384"
+              href="https://wa.me/5514997349942"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-primary"
