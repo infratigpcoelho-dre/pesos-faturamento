@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
+// Arquivo: src/app/page.tsx (VERSÃO DE TESTE "À PROVA DE ERROS")
 
 "use client";
 
@@ -37,8 +37,6 @@ export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [lancamentoParaEditar, setLancamentoParaEditar] = useState<Lancamento | null>(null);
-  const [filtros, setFiltros] = useState({ motorista: '', origem: '', produto: '' });
-  const [paginaAtual, setPaginaAtual] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -62,6 +60,8 @@ export default function Dashboard() {
     }
   }
 
+  // **** AS FUNÇÕES ABAIXO ESTÃO CORRIGIDAS PARA PASSAR NO BUILD ****
+
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
@@ -76,7 +76,6 @@ export default function Dashboard() {
     if (arquivo) {
       formData.append('arquivoNf', arquivo);
     }
-
     try {
       const response = await fetch(url, { method: method, body: formData });
       if (!response.ok) {
@@ -87,7 +86,6 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       carregarLancamentos();
     } catch (error: unknown) { 
-      console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
       if (error instanceof Error) message = error.message;
       toast.error(message);
@@ -102,7 +100,6 @@ export default function Dashboard() {
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");
     } catch (error: unknown) { 
-      console.error("Erro ao deletar lançamento:", error);
       let message = "Não foi possível excluir o lançamento.";
       if (error instanceof Error) message = error.message;
       toast.error(message);
@@ -118,36 +115,6 @@ export default function Dashboard() {
     setLancamentoParaEditar(lancamento); 
     setIsDialogOpen(true);
   };
-
-  const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPaginaAtual(1);
-    const { name, value } = e.target;
-    setFiltros(prevState => ({ ...prevState, [name]: value }));
-  };
-  
-  const handleExportCSV = () => {
-    if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
-    const csv = Papa.unparse(lancamentosFiltrados);
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `lancamentos_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Os dados foram exportados com sucesso!");
-  };
-
-  const handleExportXLSX = () => {
-    if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
-    const worksheet = XLSX.utils.json_to_sheet(lancamentosFiltrados);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos");
-    XLSX.writeFile(workbook, `lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success("Os dados foram exportados para Excel com sucesso!");
-  };
   
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -155,42 +122,10 @@ export default function Dashboard() {
     router.push('/login');
   };
 
-  const formatarMoeda = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
-  };
-
-  const formatarDataHora = (dataString: string | null) => {
-    if (!dataString) return '-';
-    try {
-      if (dataString.includes('T')) {
-         const data = new Date(dataString);
-         return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      }
-      return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-    } catch (e: unknown) {
-      return dataString; 
-    }
-  }
-
-  const lancamentosFiltrados = useMemo(() => {
-    if (!lancamentos) return [];
-    return lancamentos.filter(lancamento => {
-      const motoristaMatch = (lancamento.motorista || '').toLowerCase().includes(filtros.motorista.toLowerCase());
-      const origemMatch = (lancamento.origem || '').toLowerCase().includes(filtros.origem.toLowerCase());
-      const produtoMatch = (lancamento.produto || '').toLowerCase().includes(filtros.produto.toLowerCase());
-      return motoristaMatch && origemMatch && produtoMatch;
-    });
-  }, [lancamentos, filtros]);
-
-  const totalPaginas = Math.ceil(lancamentosFiltrados.length / ITENS_POR_PAGINA);
-  const indiceInicial = (paginaAtual - 1) * ITENS_POR_PAGINA;
-  const indiceFinal = indiceInicial + ITENS_POR_PAGINA;
-  const lancamentosPaginados = lancamentosFiltrados.slice(indiceInicial, indiceFinal);
-
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard de Pesagem</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard de Pesagem (Modo de Teste)</h1>
         <div className="flex items-center gap-2">
           <Button onClick={handleAbrirDialogParaCriar}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Lançamento</Button>
           <Button variant="outline" size="icon" onClick={handleLogout} title="Sair do sistema">
@@ -200,111 +135,26 @@ export default function Dashboard() {
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card><CardHeader><CardTitle>Peso Total por Produto</CardTitle></CardHeader><CardContent><PesoPorProdutoChart data={lancamentos} /></CardContent></Card>
-        <Card><CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader><CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent></Card>
-      </div>
-      
-      <Card>
-        <CardHeader><CardTitle>Filtros</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div><Label htmlFor="filtro-motorista">Filtrar por Motorista</Label><Input id="filtro-motorista" name="motorista" placeholder="Digite o nome..." value={filtros.motorista} onChange={handleFiltroChange} /></div>
-            <div><Label htmlFor="filtro-origem">Filtrar por Origem</Label><Input id="filtro-origem" name="origem" placeholder="Digite a origem..." value={filtros.origem} onChange={handleFiltroChange} /></div>
-            <div><Label htmlFor="filtro-produto">Filtrar por Produto</Label><Input id="filtro-produto" name="produto" placeholder="Digite o produto..." value={filtros.produto} onChange={handleFiltroChange} /></div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* GRÁFICOS E TABELA COMPLETA DESABILITADOS TEMPORARIAMENTE PARA TESTE.
+        VAMOS APENAS "CUSPIR" OS DADOS NA TELA PARA PROVAR QUE ELES ESTÃO SENDO CARREGADOS.
+      */}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Lançamentos ({lancamentosFiltrados.length})</CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" />Exportar Dados</Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCSV}>Exportar para CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportXLSX}>Exportar para Excel (.xlsx)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle>Teste de Carregamento de Dados</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px] text-center sticky left-0 bg-background z-10">Ações</TableHead>
-                  <TableHead className="w-[100px]">NF (Anexo)</TableHead>
-                  <TableHead>NF (Número)</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Hora Postada</TableHead>
-                  <TableHead>Ticket</TableHead>
-                  <TableHead>Motorista</TableHead>
-                  <TableHead>Cavalo</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead>Início Descarga</TableHead>
-                  <TableHead>Término Descarga</TableHead>
-                  <TableHead>Tempo Descarga</TableHead>
-                  <TableHead className="text-right">Peso Real</TableHead>
-                  <TableHead className="text-right">Tarifa</TableHead>
-                  <TableHead className="text-right">Valor Frete</TableHead>
-                  <TableHead>Observação</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lancamentosPaginados.map((lancamento) => (
-                  <TableRow key={lancamento.id}>
-                    <TableCell className="text-center sticky left-0 bg-background z-10">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleAbrirDialogParaEditar(lancamento)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeletarLancamento(lancamento.id)} className="text-red-600 focus:bg-red-100 focus:text-red-700"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>
-                      {lancamento.caminhoNf ? (
-                        <Button variant="outline" size="icon" asChild>
-                          <a href={`${API_URL}/uploads/${lancamento.caminhoNf}`} target="_blank" rel="noopener noreferrer" title={`Ver anexo ${lancamento.caminhoNf}`}>
-                            <LinkIcon className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{lancamento.nf || '-'}</TableCell>
-                    <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
-                    <TableCell>{lancamento.horaPostada || '-'}</TableCell>
-                    <TableCell className="font-medium">
-                      <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
-                        {lancamento.ticket || '-'}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{lancamento.motorista || '-'}</TableCell>
-                    <TableCell>{lancamento.cavalo || '-'}</TableCell>
-                    <TableCell>{lancamento.produto || '-'}</TableCell>
-                    <TableCell>{lancamento.origem || '-'}</TableCell>
-                    <TableCell>{lancamento.destino || '-'}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.inicioDescarga)}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.terminoDescarga)}</TableCell>
-                    <TableCell>{lancamento.tempoDescarga || '-'}</TableCell>
-                    <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
-                    <TableCell className="text-right">{formatarMoeda(lancamento.tarifa)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{lancamento.obs || '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <span className="text-sm text-muted-foreground">Página {paginaAtual} de {totalPaginas}</span>
-            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(prev => Math.max(prev - 1, 1))} disabled={paginaAtual === 1}>Anterior</Button>
-            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(prev => Math.min(prev + 1, totalPaginas))} disabled={paginaAtual >= totalPaginas}>Próximo</Button>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Se você vê texto na caixa abaixo, significa que o frontend conseguiu
+            buscar os dados no backend com sucesso. O problema anterior era
+            apenas na formatação (ex: .toLocaleString()) desses dados.
+          </p>
+          <pre className="mt-4 p-4 bg-slate-900 rounded-md text-green-400 overflow-auto">
+            {/* JSON.stringify é a forma mais segura de exibir dados. 
+              Ele não quebra com 'null' ou 'undefined'.
+            */}
+            {JSON.stringify(lancamentos, null, 2)}
+          </pre>
         </CardContent>
       </Card>
       
