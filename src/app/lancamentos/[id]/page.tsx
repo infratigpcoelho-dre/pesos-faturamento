@@ -24,7 +24,7 @@ const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 // Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
-  let displayValue = value ?? '-';
+  let displayValue = value ?? '-'; // Usa '-' se for null ou undefined
   
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
