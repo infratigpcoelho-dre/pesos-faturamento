@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA VALORES NULOS)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA NOMES MINÚSCULOS)
 
 "use client";
 
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type FormData = { [key: string]: string | number; };
-type InitialData = (FormData & { caminhoNf?: string; inicioDescarga?: string | null; terminoDescarga?: string | null; data?: string | null; }) | null;
+type InitialData = (FormData & { caminhonf?: string; iniciodescarga?: string | null; terminodescarga?: string | null; data?: string | null; }) | null;
 
 
 type LancamentoDialogProps = {
@@ -19,20 +19,17 @@ type LancamentoDialogProps = {
   initialData?: InitialData;
 };
 
-// Função para formatar a data para o input datetime-local
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
-    // Ajusta para o fuso horário local e formata
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
   } catch (e) {
-    return ""; // Retorna vazio se a data for inválida
+    return "";
   }
 }
 
-// Função para formatar a data para o input date
 const formatarParaDate = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
@@ -45,9 +42,9 @@ const formatarParaDate = (dataString: string | number | null | undefined) => {
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData }: LancamentoDialogProps) {
   const getInitialState = () => ({
-    data: new Date().toISOString().split('T')[0], horaPostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
-    origem: "", destino: "", inicioDescarga: "", terminoDescarga: "", tempoDescarga: "",
-    ticket: "", pesoReal: "", tarifa: "", nf: "", cavalo: "", motorista: "", valorFrete: "", obs: "", produto: ""
+    data: new Date().toISOString().split('T')[0], horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    origem: "", destino: "", iniciodescarga: "", terminodescarga: "", tempodescarga: "",
+    ticket: "", pesoreal: "", tarifa: "", nf: "", cavalo: "", motorista: "", valorfrete: "", obs: "", produto: ""
   });
 
   const [formData, setFormData] = useState<FormData>(getInitialState());
@@ -56,11 +53,10 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // CORRIGIDO: Garante que os valores nulos sejam convertidos para string vazia
         const dadosCorrigidos: FormData = { ...initialData };
         dadosCorrigidos.data = formatarParaDate(initialData.data);
-        dadosCorrigidos.inicioDescarga = formatarParaDateTimeLocal(initialData.inicioDescarga);
-        dadosCorrigidos.terminoDescarga = formatarParaDateTimeLocal(initialData.terminoDescarga);
+        dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
+        dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
         Object.keys(dadosCorrigidos).forEach(key => {
           if (dadosCorrigidos[key as keyof typeof dadosCorrigidos] === null) {
@@ -94,7 +90,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   };
 
   const isEditing = !!initialData;
-  const currentFileName = initialData?.caminhoNf;
+  const currentFileName = initialData?.caminhonf;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -107,7 +103,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
-            <div><Label htmlFor="horaPostada">Hora Postada</Label><Input id="horaPostada" name="horaPostada" type="time" value={String(formData.horaPostada)} onChange={handleChange} /></div>
+            <div><Label htmlFor="horapostada">Hora Postada</Label><Input id="horapostada" name="horapostada" type="time" value={String(formData.horapostada)} onChange={handleChange} /></div>
             <div><Label htmlFor="motorista">Motorista</Label><Input id="motorista" name="motorista" value={String(formData.motorista)} onChange={handleChange} /></div>
             <div><Label htmlFor="cavalo">Cavalo (Placa)</Label><Input id="cavalo" name="cavalo" value={String(formData.cavalo)} onChange={handleChange} /></div>
             <div><Label htmlFor="ticket">Ticket</Label><Input id="ticket" name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
@@ -116,15 +112,15 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
             <div><Label htmlFor="produto">Produto</Label><Input id="produto" name="produto" value={String(formData.produto)} onChange={handleChange} placeholder="Soja, Milho..."/></div>
             <div><Label htmlFor="origem">Origem</Label><Input id="origem" name="origem" value={String(formData.origem)} onChange={handleChange} /></div>
             <div><Label htmlFor="destino">Destino</Label><Input id="destino" name="destino" value={String(formData.destino)} onChange={handleChange} /></div>
-            <div><Label htmlFor="pesoReal">Peso Real (kg)</Label><Input id="pesoReal" name="pesoReal" type="number" value={String(formData.pesoReal)} onChange={handleChange} /></div>
+            <div><Label htmlFor="pesoreal">Peso Real (kg)</Label><Input id="pesoreal" name="pesoreal" type="number" value={String(formData.pesoreal)} onChange={handleChange} /></div>
             <div><Label htmlFor="nf">Nota Fiscal (Nº)</Label><Input id="nf" name="nf" value={String(formData.nf)} onChange={handleChange} /></div>
           </div>
           <div className="space-y-4">
-            <div><Label htmlFor="inicioDescarga">Início Descarga</Label><Input id="inicioDescarga" name="inicioDescarga" type="datetime-local" value={String(formData.inicioDescarga)} onChange={handleChange} /></div>
-            <div><Label htmlFor="terminoDescarga">Término Descarga</Label><Input id="terminoDescarga" name="terminoDescarga" type="datetime-local" value={String(formData.terminoDescarga)} onChange={handleChange} /></div>
-            <div><Label htmlFor="tempoDescarga">Tempo Descarga</Label><Input id="tempoDescarga" name="tempoDescarga" value={String(formData.tempoDescarga)} onChange={handleChange} placeholder="ex: 1h 30m"/></div>
+            <div><Label htmlFor="iniciodescarga">Início Descarga</Label><Input id="iniciodescarga" name="iniciodescarga" type="datetime-local" value={String(formData.iniciodescarga)} onChange={handleChange} /></div>
+            <div><Label htmlFor="terminodescarga">Término Descarga</Label><Input id="terminodescarga" name="terminodescarga" type="datetime-local" value={String(formData.terminodescarga)} onChange={handleChange} /></div>
+            <div><Label htmlFor="tempodescarga">Tempo Descarga</Label><Input id="tempodescarga" name="tempodescarga" value={String(formData.tempodescarga)} onChange={handleChange} placeholder="ex: 1h 30m"/></div>
             <div><Label htmlFor="tarifa">Tarifa</Label><Input id="tarifa" name="tarifa" type="number" step="0.01" value={String(formData.tarifa)} onChange={handleChange} /></div>
-            <div><Label htmlFor="valorFrete">Valor Frete</Label><Input id="valorFrete" name="valorFrete" type="number" step="0.01" value={String(formData.valorFrete)} onChange={handleChange} /></div>
+            <div><Label htmlFor="valorfrete">Valor Frete</Label><Input id="valorfrete" name="valorfrete" type="number" step="0.01" value={String(formData.valorfrete)} onChange={handleChange} /></div>
             <div><Label htmlFor="obs">Observação</Label><Input id="obs" name="obs" value={String(formData.obs)} onChange={handleChange} /></div>
           </div>
         </div>

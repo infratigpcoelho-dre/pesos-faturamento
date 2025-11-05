@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/CarregamentosPorDiaChart.tsx (CORRIGIDO PARA DADOS NULOS)
+// Arquivo: src/components/app/CarregamentosPorDiaChart.tsx (Sem mudanças, já está correto)
 
 "use client";
 

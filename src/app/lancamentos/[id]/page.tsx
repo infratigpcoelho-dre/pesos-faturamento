@@ -1,4 +1,4 @@
-// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA DADOS NULOS)
+// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA NOMES MINÚSCULOS)
 
 "use client";
 
@@ -12,19 +12,17 @@ import Link from "next/link";
 import { Label } from "@/components/ui/label";
 
 type Lancamento = {
-  id: number; data: string; horaPostada: string; origem: string; destino: string;
-  inicioDescarga: string; terminoDescarga: string; tempoDescarga: string;
-  ticket: string; pesoReal: number; tarifa: number; nf: string; cavalo: string;
-  motorista: string; valorFrete: number; obs: string; produto: string;
-  caminhoNf?: string;
+  id: number; data: string; horapostada: string; origem: string; destino: string;
+  iniciodescarga: string; terminodescarga: string; tempodescarga: string;
+  ticket: string; pesoreal: number; tarifa: number; nf: string; cavalo: string;
+  motorista: string; valorfrete: number; obs: string; produto: string;
+  caminhonf?: string;
 };
 
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
-// Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
-  let displayValue = value ?? '-'; // Usa '-' se for null ou undefined
+  let displayValue = value ?? '-';
   
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
@@ -117,10 +115,10 @@ export default function LancamentoDetalhePage() {
         <CardHeader><CardTitle>Datas e Horários</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetalheItem icon={Calendar} label="Data" value={lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'} />
-          <DetalheItem icon={Clock} label="Hora Postada" value={lancamento.horaPostada} />
-          <DetalheItem icon={Clock} label="Início Descarga" value={formatarDataHora(lancamento.inicioDescarga)} />
-          <DetalheItem icon={Clock} label="Término Descarga" value={formatarDataHora(lancamento.terminoDescarga)} />
-          <DetalheItem icon={Clock} label="Tempo Descarga" value={lancamento.tempoDescarga} />
+          <DetalheItem icon={Clock} label="Hora Postada" value={lancamento.horapostada} />
+          <DetalheItem icon={Clock} label="Início Descarga" value={formatarDataHora(lancamento.iniciodescarga)} />
+          <DetalheItem icon={Clock} label="Término Descarga" value={formatarDataHora(lancamento.terminodescarga)} />
+          <DetalheItem icon={Clock} label="Tempo Descarga" value={lancamento.tempodescarga} />
         </CardContent>
       </Card>
 
@@ -128,15 +126,15 @@ export default function LancamentoDetalhePage() {
         <CardHeader><CardTitle>Financeiro e Documentos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetalheItem icon={FileText} label="Nº da Nota Fiscal" value={lancamento.nf} />
-          <DetalheItem icon={DollarSign} label="Peso Real" value={`${(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg`} />
+          <DetalheItem icon={DollarSign} label="Peso Real" value={`${(lancamento.pesoreal || 0).toLocaleString('pt-BR')} kg`} />
           <DetalheItem icon={DollarSign} label="Tarifa" value={lancamento.tarifa} isCurrency={true} />
-          <DetalheItem icon={DollarSign} label="Valor Frete" value={lancamento.valorFrete} isCurrency={true} />
+          <DetalheItem icon={DollarSign} label="Valor Frete" value={lancamento.valorfrete} isCurrency={true} />
           <DetalheItem icon={MessageSquare} label="Observação" value={lancamento.obs} />
           <div>
             <Label className="text-sm text-muted-foreground">Anexo NF</Label>
-            {lancamento.caminhoNf ? (
+            {lancamento.caminhonf ? (
               <Button variant="outline" size="sm" asChild className="mt-2">
-                <a href={`${API_URL}/uploads/${lancamento.caminhoNf}`} target="_blank" rel="noopener noreferrer">
+                <a href={`${API_URL}/uploads/${lancamento.caminhonf}`} target="_blank" rel="noopener noreferrer">
                   <LinkIcon className="mr-2 h-4 w-4" /> Ver Anexo
                 </a>
               </Button>

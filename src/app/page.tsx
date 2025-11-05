@@ -51,16 +51,40 @@ export default function Dashboard() {
   }, [router]);
 
   async function carregarLancamentos() {
-    try {
-      const response = await fetch(`${API_URL}/lancamentos`);
-      if (!response.ok) throw new Error('Falha ao buscar dados da API');
-      const data = await response.json();
-      setLancamentos(data);
-    } catch (error) {
-      console.error("Erro ao carregar lançamentos:", error);
-      toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
-    }
+  try {
+    const response = await fetch(`${API_URL}/lancamentos`);
+    if (!response.ok) throw new Error('Falha ao buscar dados da API');
+    const data = await response.json();
+
+    // 🔧 Converter nomes de campos para camelCase esperados no frontend
+    const dataNormalizada = data.map((item: any) => ({
+      id: item.id,
+      data: item.data,
+      horaPostada: item.horapostada,
+      origem: item.origem,
+      destino: item.destino,
+      inicioDescarga: item.iniciodescarga,
+      terminoDescarga: item.terminodescarga,
+      tempoDescarga: item.tempodescarga,
+      ticket: item.ticket,
+      pesoReal: Number(item.pesoreal),
+      tarifa: Number(item.tarifa),
+      nf: item.nf,
+      cavalo: item.cavalo,
+      motorista: item.motorista,
+      valorFrete: Number(item.valorfrete),
+      obs: item.obs,
+      produto: item.produto,
+      caminhoNf: item.caminhonf
+    }));
+
+    setLancamentos(dataNormalizada);
+  } catch (error) {
+    console.error("Erro ao carregar lançamentos:", error);
+    toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
   }
+}
+
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
