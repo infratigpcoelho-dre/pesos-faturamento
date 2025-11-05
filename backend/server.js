@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM ROLES DE ACESSO)
+// Arquivo: backend/server.js (VERSÃO FINAL COM URL CORRETA E FIX DO DELETE)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -14,11 +14,13 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// 1. CORREÇÃO DA PORTA
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui
-const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
+// 2. CORREÇÃO DA URL: COLE A SUA URL DO *BANCO DE DADOS* POSTGRESQL AQUI
+// (Vá no Render > PostgreSQL > Info > e copie a "External URL" ou "Internal URL")
+const DATABASE_URL = 'COLE_A_SUA_URL_DO_POSTGRESQL_AQUI'; 
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -46,7 +48,6 @@ async function setupDatabase() {
     )
   `);
 
-  // TABELA DE USUÁRIOS ATUALIZADA
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -72,18 +73,13 @@ function authenticateToken(req, res, next) {
     next(); 
   });
 }
-// ****** FIM DO "SEGURANÇA" ******
-
 
 // --- ROTAS DE AUTENTICAÇÃO ---
-
-// ROTA POST: Registrar um usuário "motorista" (padrão)
 app.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    // O role será 'motorista' por padrão, como definido na tabela
     const result = await db.query('INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, role', [username, hashedPassword]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -94,19 +90,15 @@ app.post('/register', async (req, res) => {
 });
 
 // ***** NOVA ROTA SECRETA PARA CRIAR UM MASTER *****
-// (No futuro, esta rota seria removida ou protegida por uma chave de admin)
 app.post('/register-master', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Inserimos explicitamente o role 'master'
     const result = await db.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', 
       [username, hashedPassword, 'master']
     );
-    
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Nome de usuário já existe.' });
@@ -124,10 +116,8 @@ app.post('/login', async (req, res) => {
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
     
-    // ATUALIZADO: Token agora inclui o 'role'
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
     
-    // ATUALIZADO: Devolve o 'role' para o frontend
     res.json({ message: 'Login bem-sucedido!', token, role: user.role });
   } catch (err) {
     console.error('Erro no login:', err);
@@ -207,13 +197,17 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
+// 3. ****** CORREÇÃO FINAL NO DELETE ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
-    const lancamentoResult = await db.query('SELECT * FROM users WHERE id = $1', [id]); // Corrigido: buscar na tabela certa
+    
+    // Busca na tabela 'lancamentos' (e não 'users')
+    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]); 
+    
     if (lancamentoResult.rowCount > 0) {
       const lancamento = lancamentoResult.rows[0];
-      if (lancamento.caminhonf) { // Este campo não existe em 'users', mas a lógica de deletar arquivo é boa
+      if (lancamento.caminhonf) { // O nome da coluna é 'caminhonf'
         fs.unlink(path.join(__dirname, 'uploads', lancamento.caminhonf), (err) => {
           if (err) console.error("Erro ao deletar arquivo:", err);
         });
