@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
+// Arquivo: src/app/page.tsx (FINAL COM AUTENTICAÇÃO NAS CHAMADAS)
 
 "use client";
 
@@ -30,7 +30,6 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -41,8 +40,11 @@ export default function Dashboard() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const router = useRouter();
 
+  // Função para pegar o token do localStorage
+  const getToken = () => localStorage.getItem('authToken');
+
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = getToken();
     if (!token) {
       router.push('/login');
     } else {
@@ -52,7 +54,15 @@ export default function Dashboard() {
 
   async function carregarLancamentos() {
     try {
-      const response = await fetch(`${API_URL}/lancamentos`);
+      const token = getToken();
+      const response = await fetch(`${API_URL}/lancamentos`, {
+        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+      });
+      if (response.status === 401 || response.status === 403) {
+        toast.error("Sua sessão expirou. Faça login novamente.");
+        router.push('/login');
+        return;
+      }
       if (!response.ok) throw new Error('Falha ao buscar dados da API');
       const data = await response.json();
       setLancamentos(data);
@@ -63,6 +73,7 @@ export default function Dashboard() {
   }
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
+    const token = getToken();
     const isEditing = !!lancamentoParaEditar;
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
     const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
@@ -78,7 +89,17 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch(url, { method: method, body: formData });
+      const response = await fetch(url, { 
+        method: method, 
+        body: formData,
+        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        toast.error("Sua sessão expirou. Faça login novamente.");
+        router.push('/login');
+        return;
+      }
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})); 
         throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
@@ -95,9 +116,18 @@ export default function Dashboard() {
   };
   
   const handleDeletarLancamento = async (idParaDeletar: number) => {
+    const token = getToken();
     if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
     try {
-      const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+      });
+      if (response.status === 401 || response.status === 403) {
+        toast.error("Sua sessão expirou. Faça login novamente.");
+        router.push('/login');
+        return;
+      }
       if (!response.ok) throw new Error('Falha ao deletar no backend');
       setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
       toast.success("Lançamento excluído com sucesso!");

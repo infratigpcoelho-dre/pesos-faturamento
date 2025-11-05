@@ -1,4 +1,4 @@
-// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA DADOS NULOS)
+// Arquivo: src/app/lancamentos/[id]/page.tsx (FINAL COM AUTENTICAÇÃO)
 
 "use client";
 
@@ -19,17 +19,13 @@ type Lancamento = {
   caminhonf?: string;
 };
 
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
-// Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
   let displayValue = value ?? '-';
-  
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
   }
-  
   return (
     <div className="flex items-start space-x-3">
       <Icon className="h-5 w-5 text-muted-foreground mt-1" />
@@ -45,20 +41,25 @@ export default function LancamentoDetalhePage() {
   const [lancamento, setLancamento] = useState<Lancamento | null>(null);
   const params = useParams();
   const router = useRouter();
-  
   const id = params.id as string;
 
   useEffect(() => {
-    if (!id) return;
     const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (!id || !token) {
       router.push('/login');
       return;
     }
 
     async function carregarDetalhes() {
       try {
-        const response = await fetch(`${API_URL}/lancamentos/${id}`);
+        const response = await fetch(`${API_URL}/lancamentos/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+        });
+        if (response.status === 401 || response.status === 403) {
+          toast.error("Sua sessão expirou. Faça login novamente.");
+          router.push('/login');
+          return;
+        }
         if (!response.ok) throw new Error('Lançamento não encontrado');
         const data = await response.json();
         setLancamento(data);
@@ -76,8 +77,7 @@ export default function LancamentoDetalhePage() {
     if (!dataString) return '-';
     try {
       if (dataString.includes('T')) {
-         const data = new Date(dataString);
-         return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+         return new Date(dataString).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
       return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
     } catch (e: unknown) {
