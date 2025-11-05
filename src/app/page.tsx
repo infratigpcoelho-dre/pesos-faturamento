@@ -60,7 +60,7 @@ export default function Dashboard() {
       });
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
-        router.push('/login');
+        handleLogout(false); // Chama o logout sem o toast de sucesso
         return;
       }
       if (!response.ok) throw new Error('Falha ao buscar dados da API');
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
-        router.push('/login');
+        handleLogout(false);
         return;
       }
       if (!response.ok) {
@@ -125,7 +125,7 @@ export default function Dashboard() {
       });
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
-        router.push('/login');
+        handleLogout(false);
         return;
       }
       if (!response.ok) throw new Error('Falha ao deletar no backend');
@@ -179,9 +179,11 @@ export default function Dashboard() {
     toast.success("Os dados foram exportados para Excel com sucesso!");
   };
   
-  const handleLogout = () => {
+  const handleLogout = (mostrarToast = true) => {
     localStorage.removeItem('authToken');
-    toast.success("Você saiu com segurança.");
+    if (mostrarToast) {
+      toast.success("Você saiu com segurança.");
+    }
     router.push('/login');
   };
 
@@ -223,7 +225,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold tracking-tight">Dashboard de Pesagem</h1>
         <div className="flex items-center gap-2">
           <Button onClick={handleAbrirDialogParaCriar}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Lançamento</Button>
-          <Button variant="outline" size="icon" onClick={handleLogout} title="Sair do sistema">
+          <Button variant="outline" size="icon" onClick={() => handleLogout(true)} title="Sair do sistema">
             <LogOut className="h-4 w-4" />
             <span className="sr-only">Sair</span>
           </Button>

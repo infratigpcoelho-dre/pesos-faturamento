@@ -35,6 +35,7 @@ const upload = multer({ storage: storage });
 
 async function setupDatabase() {
   await db.connect(); 
+  
   await db.query(`
     CREATE TABLE IF NOT EXISTS lancamentos (
       id SERIAL PRIMARY KEY, data TEXT, horapostada TEXT, origem TEXT,
@@ -44,11 +45,13 @@ async function setupDatabase() {
       caminhonf TEXT
     )
   `);
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'motorista'
     )
   `);
 }
@@ -76,6 +79,7 @@ function authenticateToken(req, res, next) {
 }
 // ****** FIM DO "SEGURANÇA" ******
 
+
 // --- ROTAS DE AUTENTICAÇÃO (NÃO SÃO PROTEGIDAS) ---
 app.post('/register', async (req, res) => {
   try {
@@ -99,8 +103,12 @@ app.post('/login', async (req, res) => {
     const user = result.rows[0];
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '8h' });
-    res.json({ message: 'Login bem-sucedido!', token });
+    
+    // ATUALIZADO: Token agora inclui o 'role'
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    
+    // ATUALIZADO: Devolve o 'role' para o frontend
+    res.json({ message: 'Login bem-sucedido!', token, role: user.role });
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
