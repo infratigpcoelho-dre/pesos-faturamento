@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (VERSÃO FINAL COMPLETA)
+// Arquivo: src/app/page.tsx (CORREÇÃO DE RUNTIME FINAL)
 
 "use client";
 
@@ -156,6 +156,7 @@ export default function Dashboard() {
   };
 
   const formatarMoeda = (valor: number) => {
+    // Blindado contra nulos
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
@@ -253,6 +254,7 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* AQUI ESTÁ A BLINDAGEM CONTRA NULOS */}
                 {lancamentosPaginados.map((lancamento) => (
                   <TableRow key={lancamento.id}>
                     <TableCell className="text-center sticky left-0 bg-background z-10">
