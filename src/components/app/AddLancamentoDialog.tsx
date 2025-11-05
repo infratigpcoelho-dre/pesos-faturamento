@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA NOMES MINÚSCULOS)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA NOMES MINÚSCULOS E NULOS)
 
 "use client";
 
@@ -19,6 +19,7 @@ type LancamentoDialogProps = {
   initialData?: InitialData;
 };
 
+// Função para formatar a data para o input datetime-local
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
@@ -30,6 +31,7 @@ const formatarParaDateTimeLocal = (dataString: string | number | null | undefine
   }
 }
 
+// Função para formatar a data para o input date
 const formatarParaDate = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {

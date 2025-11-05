@@ -20,11 +20,11 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 type Lancamento = {
-  id: number; data: string; horaPostada: string; origem: string; destino: string;
-  inicioDescarga: string; terminoDescarga: string; tempoDescarga: string;
-  ticket: string; pesoReal: number; tarifa: number; nf: string; cavalo: string;
-  motorista: string; valorFrete: number; obs: string; produto: string;
-  caminhoNf?: string;
+  id: number; data: string; horapostada: string; origem: string; destino: string;
+  iniciodescarga: string; terminodescarga: string; tempodescarga: string;
+  ticket: string; pesoreal: number; tarifa: number; nf: string; cavalo: string;
+  motorista: string; valorfrete: number; obs: string; produto: string;
+  caminhonf?: string;
 };
 
 type FormData = { [key: string]: string | number; };
@@ -51,40 +51,16 @@ export default function Dashboard() {
   }, [router]);
 
   async function carregarLancamentos() {
-  try {
-    const response = await fetch(`${API_URL}/lancamentos`);
-    if (!response.ok) throw new Error('Falha ao buscar dados da API');
-    const data = await response.json();
-
-    // 🔧 Converter nomes de campos para camelCase esperados no frontend
-    const dataNormalizada = data.map((item: any) => ({
-      id: item.id,
-      data: item.data,
-      horaPostada: item.horapostada,
-      origem: item.origem,
-      destino: item.destino,
-      inicioDescarga: item.iniciodescarga,
-      terminoDescarga: item.terminodescarga,
-      tempoDescarga: item.tempodescarga,
-      ticket: item.ticket,
-      pesoReal: Number(item.pesoreal),
-      tarifa: Number(item.tarifa),
-      nf: item.nf,
-      cavalo: item.cavalo,
-      motorista: item.motorista,
-      valorFrete: Number(item.valorfrete),
-      obs: item.obs,
-      produto: item.produto,
-      caminhoNf: item.caminhonf
-    }));
-
-    setLancamentos(dataNormalizada);
-  } catch (error) {
-    console.error("Erro ao carregar lançamentos:", error);
-    toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
+    try {
+      const response = await fetch(`${API_URL}/lancamentos`);
+      if (!response.ok) throw new Error('Falha ao buscar dados da API');
+      const data = await response.json();
+      setLancamentos(data);
+    } catch (error) {
+      console.error("Erro ao carregar lançamentos:", error);
+      toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
+    }
   }
-}
-
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const isEditing = !!lancamentoParaEditar;
@@ -180,7 +156,6 @@ export default function Dashboard() {
   };
 
   const formatarMoeda = (valor: number) => {
-    // Blindado contra nulos
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
@@ -278,7 +253,6 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* AQUI ESTÁ A BLINDAGEM CONTRA NULOS */}
                 {lancamentosPaginados.map((lancamento) => (
                   <TableRow key={lancamento.id}>
                     <TableCell className="text-center sticky left-0 bg-background z-10">
@@ -291,9 +265,9 @@ export default function Dashboard() {
                       </DropdownMenu>
                     </TableCell>
                     <TableCell>
-                      {lancamento.caminhoNf ? (
+                      {lancamento.caminhonf ? (
                         <Button variant="outline" size="icon" asChild>
-                          <a href={`${API_URL}/uploads/${lancamento.caminhoNf}`} target="_blank" rel="noopener noreferrer" title={`Ver anexo ${lancamento.caminhoNf}`}>
+                          <a href={`${API_URL}/uploads/${lancamento.caminhonf}`} target="_blank" rel="noopener noreferrer" title={`Ver anexo ${lancamento.caminhonf}`}>
                             <LinkIcon className="h-4 w-4" />
                           </a>
                         </Button>
@@ -303,7 +277,7 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell>{lancamento.nf || '-'}</TableCell>
                     <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
-                    <TableCell>{lancamento.horaPostada || '-'}</TableCell>
+                    <TableCell>{lancamento.horapostada || '-'}</TableCell>
                     <TableCell className="font-medium">
                       <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
                         {lancamento.ticket || '-'}
@@ -314,12 +288,12 @@ export default function Dashboard() {
                     <TableCell>{lancamento.produto || '-'}</TableCell>
                     <TableCell>{lancamento.origem || '-'}</TableCell>
                     <TableCell>{lancamento.destino || '-'}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.inicioDescarga)}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.terminoDescarga)}</TableCell>
-                    <TableCell>{lancamento.tempoDescarga || '-'}</TableCell>
-                    <TableCell className="text-right">{(lancamento.pesoReal || 0).toLocaleString('pt-BR')} kg</TableCell>
+                    <TableCell>{formatarDataHora(lancamento.iniciodescarga)}</TableCell>
+                    <TableCell>{formatarDataHora(lancamento.terminodescarga)}</TableCell>
+                    <TableCell>{lancamento.tempodescarga || '-'}</TableCell>
+                    <TableCell className="text-right">{(lancamento.pesoreal || 0).toLocaleString('pt-BR')} kg</TableCell>
                     <TableCell className="text-right">{formatarMoeda(lancamento.tarifa)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorFrete)}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorfrete)}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{lancamento.obs || '-'}</TableCell>
                   </TableRow>
                 ))}

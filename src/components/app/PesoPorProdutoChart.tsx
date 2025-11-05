@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/PesoPorProdutoChart.tsx (CORRIGIDO PARA NOMES MINÚSCULOS)
+// Arquivo: src/components/app/PesoPorProdutoChart.tsx (CORRIGIDO PARA DADOS NULOS)
 
 "use client";
 
@@ -6,7 +6,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGri
 
 type Lancamento = {
   produto: string;
-  pesoreal: number; // MUDANÇA AQUI
+  pesoreal: number;
 };
 
 type PesoPorProdutoChartProps = {
@@ -16,7 +16,7 @@ type PesoPorProdutoChartProps = {
 export function PesoPorProdutoChart({ data }: PesoPorProdutoChartProps) {
   const dadosProcessados = data.reduce((acc, lancamento) => {
     const produto = lancamento.produto || "Não especificado";
-    const peso = Number(lancamento.pesoreal) || 0; // MUDANÇA AQUI
+    const peso = Number(lancamento.pesoreal) || 0;
     
     const produtoExistente = acc.find(item => item.produto === produto);
 

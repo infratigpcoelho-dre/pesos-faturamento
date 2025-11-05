@@ -1,4 +1,4 @@
-// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA NOMES MINÚSCULOS)
+// Arquivo: src/app/lancamentos/[id]/page.tsx (CORRIGIDO PARA DADOS NULOS)
 
 "use client";
 
@@ -19,8 +19,10 @@ type Lancamento = {
   caminhonf?: string;
 };
 
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
+// Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
   let displayValue = value ?? '-';
   
