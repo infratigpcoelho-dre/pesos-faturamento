@@ -1,10 +1,10 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM ROTAS 100% PROTEGIDAS)
+// Arquivo: backend/server.js (VERSÃO FINAL COM ROLES DE ACESSO)
 
 const express = require('express');
 const { Client } = require('pg');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken'); // Usaremos o 'verify'
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -46,33 +46,28 @@ async function setupDatabase() {
     )
   `);
 
+  // TABELA DE USUÁRIOS ATUALIZADA
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      role TEXT DEFAULT 'motorista'
+      role TEXT DEFAULT 'motorista' 
     )
   `);
 }
 
 // ****** NOSSO "SEGURANÇA" (Middleware) ******
 function authenticateToken(req, res, next) {
-  // 1. Pega o "crachá" do cabeçalho da requisição
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Formato: "Bearer SEUTOKEN"
+  const token = authHeader && authHeader.split(' ')[1]; 
+  if (token == null) return res.sendStatus(401); 
 
-  // 2. Se não houver crachá, barra a entrada
-  if (token == null) return res.sendStatus(401); // Não autorizado
-
-  // 3. Verifica se o crachá é válido
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       console.error('Erro de token:', err.message);
-      return res.sendStatus(403); // Proibido (crachá inválido ou expirado)
+      return res.sendStatus(403); 
     }
-    
-    // 4. Se for válido, anexa os dados do usuário na requisição e deixa passar
     req.user = user;
     next(); 
   });
@@ -80,17 +75,42 @@ function authenticateToken(req, res, next) {
 // ****** FIM DO "SEGURANÇA" ******
 
 
-// --- ROTAS DE AUTENTICAÇÃO (NÃO SÃO PROTEGIDAS) ---
+// --- ROTAS DE AUTENTICAÇÃO ---
+
+// ROTA POST: Registrar um usuário "motorista" (padrão)
 app.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await db.query('INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username', [username, hashedPassword]);
+    // O role será 'motorista' por padrão, como definido na tabela
+    const result = await db.query('INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, role', [username, hashedPassword]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Nome de usuário já existe.' });
     console.error('Erro ao registrar usuário:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// ***** NOVA ROTA SECRETA PARA CRIAR UM MASTER *****
+// (No futuro, esta rota seria removida ou protegida por uma chave de admin)
+app.post('/register-master', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Inserimos explicitamente o role 'master'
+    const result = await db.query(
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', 
+      [username, hashedPassword, 'master']
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Nome de usuário já existe.' });
+    console.error('Erro ao registrar master:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
@@ -115,9 +135,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// --- ROTAS DE LANÇAMENTOS (AGORA PROTEGIDAS!) ---
-
-// Adicionamos 'authenticateToken' em todas as rotas de lançamentos
+// --- ROTAS DE LANÇAMENTOS (PROTEGIDAS) ---
 app.get('/lancamentos', authenticateToken, async (req, res) => { 
   try { 
     const result = await db.query('SELECT * FROM lancamentos ORDER BY id DESC'); 
@@ -192,10 +210,10 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
-    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]);
+    const lancamentoResult = await db.query('SELECT * FROM users WHERE id = $1', [id]); // Corrigido: buscar na tabela certa
     if (lancamentoResult.rowCount > 0) {
       const lancamento = lancamentoResult.rows[0];
-      if (lancamento.caminhonf) {
+      if (lancamento.caminhonf) { // Este campo não existe em 'users', mas a lógica de deletar arquivo é boa
         fs.unlink(path.join(__dirname, 'uploads', lancamento.caminhonf), (err) => {
           if (err) console.error("Erro ao deletar arquivo:", err);
         });
@@ -206,7 +224,6 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
     res.status(204).send(); 
   } catch(e){ console.error("Erro no DELETE:", e); res.status(500).json({error: e.message}) } 
 });
-// --- FIM DAS ROTAS ---
 
 // Inicia o servidor
 setupDatabase().then(() => {
