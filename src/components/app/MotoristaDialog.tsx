@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/MotoristaDialog.tsx (NOVO ARQUIVO)
+// Arquivo: src/components/app/MotoristaDialog.tsx (CORREÇÃO FINAL DE TIPO)
 
 "use client";
 
@@ -24,14 +24,27 @@ type FormData = {
   placa_cavalo: string;
   placas_carretas: string;
   username: string;
-  password?: string; // Senha é opcional na edição
+  password?: string;
 };
+
+// O tipo que vem do backend (pode ter nulos)
+type MotoristaData = {
+  id: number;
+  username: string;
+  nome_completo: string | null;
+  cpf: string | null;
+  cnh: string | null;
+  placa_cavalo: string | null;
+  placas_carretas: string | null;
+  role: string;
+};
+
 
 type MotoristaDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: FormData) => void;
-  initialData?: FormData | null;
+  initialData?: MotoristaData | null; // Agora espera o tipo que vem da API
 };
 
 export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: MotoristaDialogProps) {
@@ -48,10 +61,26 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
   useEffect(() => {
     if (isOpen) {
       if (isEditing && initialData) {
-        // Se está editando, preenche com os dados (sem a senha)
-        setFormData({ ...initialData, password: "" }); 
+        
+        // ****** AQUI ESTÁ A CORREÇÃO ******
+        // Criamos o objeto 'dadosLimpados' campo por campo,
+        // usando o 'operador de coalescência nula' (??) para
+        // trocar qualquer 'null' ou 'undefined' por uma string vazia "".
+        const dadosLimpados: FormData = {
+          id: initialData.id,
+          username: initialData.username ?? "",
+          nome_completo: initialData.nome_completo ?? "",
+          cpf: initialData.cpf ?? "",
+          cnh: initialData.cnh ?? "",
+          placa_cavalo: initialData.placa_cavalo ?? "",
+          placas_carretas: initialData.placas_carretas ?? "",
+          password: "" // Sempre começa com a senha vazia
+        };
+        // ****** FIM DA CORREÇÃO ******
+        
+        setFormData(dadosLimpados); // Salva os dados limpos no estado
+
       } else {
-        // Se está criando, limpa o formulário
         setFormData(getInitialState());
       }
     }
