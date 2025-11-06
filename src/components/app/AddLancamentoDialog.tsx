@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA NOMES MINÚSCULOS E NULOS)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA VALORES NULOS E NOMES MINÚSCULOS)
 
 "use client";
 
@@ -9,7 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type FormData = { [key: string]: string | number; };
-type InitialData = (FormData & { caminhonf?: string; iniciodescarga?: string | null; terminodescarga?: string | null; data?: string | null; }) | null;
+
+// O tipo que vem do backend (com 'null' e nomes em minúsculo)
+type InitialData = {
+  id: number; data: string | null; horapostada: string | null; origem: string | null; destino: string | null;
+  iniciodescarga: string | null; terminodescarga: string | null; tempodescarga: string | null;
+  ticket: string | null; pesoreal: number | null; tarifa: number | null; nf: string | null; cavalo: string | null;
+  motorista: string | null; valorfrete: number | null; obs: string | null; produto: string | null;
+  caminhonf?: string | null;
+} | null;
 
 
 type LancamentoDialogProps = {
@@ -21,19 +29,20 @@ type LancamentoDialogProps = {
 
 // Função para formatar a data para o input datetime-local
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
-  if (!dataString) return "";
+  if (!dataString) return ""; // Retorna string vazia se for null/undefined
   try {
     const data = new Date(dataString);
+    // Ajusta para o fuso horário local e formata
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
   } catch (e) {
-    return "";
+    return ""; // Retorna vazio se a data for inválida
   }
 }
 
 // Função para formatar a data para o input date
 const formatarParaDate = (dataString: string | number | null | undefined) => {
-  if (!dataString) return "";
+  if (!dataString) return ""; // Retorna string vazia se for null/undefined
   try {
     const data = new Date(dataString);
     return data.toISOString().split('T')[0];
@@ -55,18 +64,24 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        const dadosCorrigidos: FormData = { ...initialData };
-        dadosCorrigidos.data = formatarParaDate(initialData.data);
-        dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
-        dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
+        // ****** AQUI ESTÁ A CORREÇÃO ******
+        // Criamos um objeto 'dadosLimpados'
+        const dadosLimpados: FormData = {} as FormData;
         
-        Object.keys(dadosCorrigidos).forEach(key => {
-          if (dadosCorrigidos[key as keyof typeof dadosCorrigidos] === null) {
-            dadosCorrigidos[key as keyof typeof dadosCorrigidos] = "";
-          }
+        // Copiamos todos os campos, trocando 'null' por '""'
+        Object.keys(initialData).forEach(key => {
+          const valor = initialData[key as keyof typeof initialData];
+          dadosLimpados[key] = valor ?? ""; // ?? significa: "se for null ou undefined, use """
         });
+
+        // Formatamos as datas especiais
+        dadosLimpados.data = formatarParaDate(initialData.data);
+        dadosLimpados.horapostada = initialData.horapostada ?? "";
+        dadosLimpados.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
+        dadosLimpados.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
-        setFormData(dadosCorrigidos);
+        setFormData(dadosLimpados);
+        // ****** FIM DA CORREÇÃO ******
       } else {
         setFormData(getInitialState());
       }
@@ -102,6 +117,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
           <DialogDescription>{isEditing ? "Altere as informações abaixo." : "Preencha todos os campos do carregamento."}</DialogDescription>
         </DialogHeader>
 
+        {/* O JSX agora usa os nomes em MINÚSCULO (horapostada, pesoreal, etc.) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
