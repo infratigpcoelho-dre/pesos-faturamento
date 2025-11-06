@@ -28,7 +28,7 @@ type Motorista = {
 // O tipo para os dados do formulário
 type FormData = { [key: string]: string | number | undefined; };
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
+const API_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
 
 export default function GerenciarMotoristasPage() {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
