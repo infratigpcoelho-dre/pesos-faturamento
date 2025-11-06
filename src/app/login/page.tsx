@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (TIPAGEM 100% CORRETA)
+// Arquivo: src/app/login/page.tsx (ATUALIZADO PARA SALVAR O 'ROLE')
 
 "use client";
 
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-// ATENÇÃO: Confirme se esta é a URL correta do seu backend no Render
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function LoginPage() {
@@ -33,11 +33,16 @@ export default function LoginPage() {
         throw new Error(data.error || 'Erro desconhecido no login.');
       }
 
-      toast.success('Login bem-sucedido!');
+      // ****** AQUI ESTÁ A MUDANÇA ******
+      // Agora salvamos as DUAS informações que o backend nos deu
       localStorage.setItem('authToken', data.token);
-      router.push('/');
+      localStorage.setItem('userRole', data.role); // Salvamos o nível de acesso
+      // ****** FIM DA MUDANÇA ******
 
-    } catch (error: unknown) { // CORREÇÃO AQUI: 'any' trocado por 'unknown'
+      toast.success('Login bem-sucedido!');
+      router.push('/'); // Redireciona para o dashboard principal
+
+    } catch (error: unknown) {
       console.error("Falha no login:", error);
       let message = "Falha no login. Verifique suas credenciais.";
       if (error instanceof Error) {
@@ -78,7 +83,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm">
             Não consegue acessar?{" "}
             <a
-              href="https://wa.me/5514997349942"
+              href="https://wa.me/55996908384"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-primary"

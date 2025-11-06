@@ -24,10 +24,10 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <p>Bem-vindo, Mestre! Esta é a sua área de administração.</p>
-          {/* Em breve, adicionaremos os links para as novas páginas aqui */}
           <div className="mt-4">
-            <Button asChild>
-              <Link href="/admin/motoristas">Gerenciar Motoristas</Link>
+            {/* O link para motoristas ainda não existe, mas vamos deixar preparado */}
+            <Button asChild variant="outline">
+              <Link href="#">Gerenciar Motoristas (em breve)</Link>
             </Button>
           </div>
         </CardContent>

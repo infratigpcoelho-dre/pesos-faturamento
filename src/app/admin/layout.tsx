@@ -22,7 +22,7 @@ export default function AdminLayout({
       // 2. Se for "master", permite o acesso
       setIsMaster(true);
     } else {
-      // 3. Se NÃO for "master", nega o acesso e chuta para o dashboard principal
+      // 3. Se NÃO for "master" (ou for 'null'), nega o acesso
       toast.error("Acesso negado. Você não tem permissão de Master.");
       router.push('/');
     }
@@ -36,7 +36,6 @@ export default function AdminLayout({
   // Se a verificação passou, mostra o conteúdo da página de admin
   return (
     <div>
-      {/* Aqui poderíamos adicionar um menu lateral de Admin no futuro */}
       {children}
     </div>
   );
