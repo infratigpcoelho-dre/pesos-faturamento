@@ -61,14 +61,15 @@ async function setupDatabase() {
       nome TEXT UNIQUE NOT NULL
     )
   `);
-  
+  // ****** FIM DA NOVA TABELA ******
+
   // --- MIGRAÇÃO AUTOMÁTICA (Garante que as colunas existem) ---
   try {
     await db.query(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'motorista'`);
     console.log("MIGRAÇÃO: Coluna 'role' adicionada.");
   } catch (err) {
     if (err.code === '42701') console.log("MIGRAÇÃO: Coluna 'role' já existe.");
-    else throw err;
+    else if (err.code !== 'ENOTFOUND') throw err; // Ignora erros de DB temporários
   }
   
   try {
@@ -80,7 +81,7 @@ async function setupDatabase() {
     console.log("MIGRAÇÃO: Colunas de motorista adicionadas.");
   } catch (err) {
     if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
-    else throw err;
+    else if (err.code !== 'ENOTFOUND') throw err; // Ignora erros de DB temporários
   }
 }
 
@@ -313,7 +314,9 @@ app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (
   }
 });
 
+
 // ****** NOVAS ROTAS PARA GERENCIAR PRODUTOS ******
+// (Protegidas por 'authenticateToken' E 'authenticateMaster')
 
 // GET: Listar todos os produtos (Qualquer usuário logado pode ver)
 app.get('/api/produtos', authenticateToken, async (req, res) => {
