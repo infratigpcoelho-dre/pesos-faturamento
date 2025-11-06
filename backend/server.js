@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE MOTORISTAS)
+// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE PRODUTOS)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -15,10 +15,10 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
+const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
 
 // ATENÇÃO: Confirme que sua URL do Render está aqui
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
+const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -46,7 +46,6 @@ async function setupDatabase() {
     )
   `);
 
-  // Cria a tabela 'users' (pode ser a versão antiga sem 'role')
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -54,8 +53,16 @@ async function setupDatabase() {
       password TEXT NOT NULL
     )
   `);
+
+  // ****** NOVA TABELA DE PRODUTOS ******
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS produtos (
+      id SERIAL PRIMARY KEY,
+      nome TEXT UNIQUE NOT NULL
+    )
+  `);
   
-  // --- MIGRAÇÃO AUTOMÁTICA ---
+  // --- MIGRAÇÃO AUTOMÁTICA (Garante que as colunas existem) ---
   try {
     await db.query(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'motorista'`);
     console.log("MIGRAÇÃO: Coluna 'role' adicionada.");
@@ -75,33 +82,26 @@ async function setupDatabase() {
     if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
     else throw err;
   }
-  // --- FIM DA MIGRAÇÃO ---
 }
 
-// ****** "SEGURANÇA" (Middleware) ******
+// --- Middlewares de Segurança (sem mudanças) ---
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; 
   if (token == null) return res.sendStatus(401); 
-
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('Erro de token:', err.message);
-      return res.sendStatus(403); 
-    }
+    if (err) return res.sendStatus(403); 
     req.user = user;
     next(); 
   });
 }
 
-// ****** "SEGURANÇA MASTER" (Middleware) ******
 function authenticateMaster(req, res, next) {
   if (req.user.role !== 'master') {
     return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master.' });
   }
   next();
 }
-
 
 // --- ROTAS DE AUTENTICAÇÃO ---
 app.post('/register', async (req, res) => {
@@ -241,11 +241,7 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
   } catch(e){ console.error("Erro no DELETE:", e); res.status(500).json({error: e.message}) } 
 });
 
-
-// ****** NOVAS ROTAS DE ADMIN PARA GERENCIAR MOTORISTAS ******
-// (Protegidas por 'authenticateToken' E 'authenticateMaster')
-
-// GET: Listar todos os motoristas
+// --- ROTAS DE ADMIN/MOTORISTAS ---
 app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role = 'motorista' ORDER BY nome_completo");
@@ -256,7 +252,6 @@ app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, re
   }
 });
 
-// POST: Criar um novo motorista
 app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { username, password, nome_completo, cpf, cnh, placa_cavalo, placas_carretas } = req.body;
@@ -264,17 +259,14 @@ app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, r
       return res.status(400).json({ error: 'Login, senha e nome completo são obrigatórios.' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    
     const result = await db.query(
       `INSERT INTO users (username, password, role, nome_completo, cpf, cnh, placa_cavalo, placas_carretas) 
        VALUES ($1, $2, 'motorista', $3, $4, $5, $6, $7) RETURNING *`,
       [username, hashedPassword, nome_completo, cpf, cnh, placa_cavalo, placas_carretas]
     );
-    
     const novoMotorista = result.rows[0];
-    delete novoMotorista.password; // Nunca retorne a senha, mesmo criptografada
+    delete novoMotorista.password;
     res.status(201).json(novoMotorista);
-
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Esse nome de usuário (login) já existe.' });
     console.error('Erro ao criar motorista:', err);
@@ -282,14 +274,11 @@ app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, r
   }
 });
 
-// PUT: Editar um motorista
 app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
     const { nome_completo, cpf, cnh, placa_cavalo, placas_carretas, password } = req.body;
-
     if (password && password.length > 0) {
-      // Se uma nova senha foi fornecida ("redefinição de senha")
       const hashedPassword = await bcrypt.hash(password, 10);
       await db.query(
         `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5, password = $6 
@@ -297,26 +286,22 @@ app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req
         [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, hashedPassword, id]
       );
     } else {
-      // Se não, atualiza só os outros dados
       await db.query(
         `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5 
          WHERE id = $6 AND role = 'motorista'`,
         [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, id]
       );
     }
-    
     const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
     const motoristaAtualizado = result.rows[0];
     delete motoristaAtualizado.password;
     res.json(motoristaAtualizado);
-
   } catch (err) {
     console.error('Erro ao atualizar motorista:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
 
-// DELETE: Deletar um motorista
 app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
@@ -324,6 +309,68 @@ app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (
     res.status(204).send();
   } catch (err) {
     console.error('Erro ao deletar motorista:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// ****** NOVAS ROTAS PARA GERENCIAR PRODUTOS ******
+
+// GET: Listar todos os produtos (Qualquer usuário logado pode ver)
+app.get('/api/produtos', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM produtos ORDER BY nome");
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar produtos:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// POST: Criar um novo produto (Apenas 'master')
+app.post('/api/produtos', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+    
+    const result = await db.query(
+      `INSERT INTO produtos (nome) VALUES ($1) RETURNING *`, [nome]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Esse produto já existe.' });
+    console.error('Erro ao criar produto:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// PUT: Editar um produto (Apenas 'master')
+app.put('/api/produtos/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+
+    const result = await db.query(
+      `UPDATE produtos SET nome = $1 WHERE id = $2 RETURNING *`,
+      [nome, id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Produto não encontrado.' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Esse produto já existe.' });
+    console.error('Erro ao atualizar produto:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// DELETE: Deletar um produto (Apenas 'master')
+app.delete('/api/produtos/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM produtos WHERE id = $1", [id]);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao deletar produto:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });

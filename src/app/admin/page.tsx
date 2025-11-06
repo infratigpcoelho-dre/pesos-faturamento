@@ -1,8 +1,8 @@
-// Arquivo: src/app/admin/page.tsx (A PÁGINA PRINCIPAL DO MASTER)
+// Arquivo: src/app/admin/page.tsx (ATUALIZADO COM O MENU DO MASTER)
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Users, Boxes, Warehouse } from "lucide-react"; // Importamos os ícones novos
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -10,6 +10,7 @@ export default function AdminDashboard() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
+          {/* Link para voltar ao dashboard principal */}
           <Link href="/">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Voltar</span>
@@ -21,14 +22,34 @@ export default function AdminDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Gerenciamento do Sistema</CardTitle>
+          <CardDescription>
+            Bem-vindo, Mestre! Esta é a sua área de administração.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>Bem-vindo, Mestre! Esta é a sua área de administração.</p>
-          <div className="mt-4">
-            {/* O link para motoristas ainda não existe, mas vamos deixar preparado */}
-            <Button asChild variant="outline">
-              <Link href="#">Gerenciar Motoristas (em breve)</Link>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* 1. Botão para Gerenciar Motoristas (o que você pediu) */}
+            <Button asChild className="h-20 text-lg">
+              <Link href="/admin/motoristas">
+                <Users className="mr-2 h-5 w-5" /> Gerenciar Motoristas
+              </Link>
             </Button>
+
+            {/* 2. Botão para Gerenciar Produtos (Sugestão) */}
+            <Button asChild variant="outline" className="h-20 text-lg">
+              <Link href="#"> {/* Deixamos o link '#' por enquanto */}
+                <Boxes className="mr-2 h-5 w-5" /> Gerenciar Produtos (em breve)
+              </Link>
+            </Button>
+
+            {/* 3. Botão para Gerenciar Origens/Destinos (Sugestão) */}
+            <Button asChild variant="outline" className="h-20 text-lg">
+              <Link href="#"> {/* Deixamos o link '#' por enquanto */}
+                <Warehouse className="mr-2 h-5 w-5" /> Gerenciar Origens/Destinos (em breve)
+              </Link>
+            </Button>
+
           </div>
         </CardContent>
       </Card>
