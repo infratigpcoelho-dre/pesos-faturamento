@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL 100% CORRETA)
+// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE MOTORISTAS)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -14,12 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 1. CORREÇÃO DA PORTA (Do passo 153)
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
-// 2. CORREÇÃO DA URL (A SUA URL CORRETA do passo 152)
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
+// ATENÇÃO: Confirme que sua URL do Render está aqui
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -56,21 +55,53 @@ async function setupDatabase() {
     )
   `);
   
-  // ****** NOSSA MIGRAÇÃO AUTOMÁTICA ******
-  // Adiciona a coluna 'role' SE ELA NÃO EXISTIR
+  // --- MIGRAÇÃO AUTOMÁTICA ---
   try {
     await db.query(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'motorista'`);
-    console.log("MIGRAÇÃO: Coluna 'role' adicionada com sucesso.");
+    console.log("MIGRAÇÃO: Coluna 'role' adicionada.");
   } catch (err) {
-    if (err.code === '42701') {
-      console.log("MIGRAÇÃO: Coluna 'role' já existe. Pulando.");
-    } else {
-      console.error("Erro na migração da coluna 'role':", err);
-      throw err;
-    }
+    if (err.code === '42701') console.log("MIGRAÇÃO: Coluna 'role' já existe.");
+    else throw err;
   }
-  // ****** FIM DA MIGRAÇÃO ******
+  
+  try {
+    await db.query(`ALTER TABLE users ADD COLUMN nome_completo TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN cpf TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN cnh TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN placa_cavalo TEXT`);
+    await db.query(`ALTER TABLE users ADD COLUMN placas_carretas TEXT`);
+    console.log("MIGRAÇÃO: Colunas de motorista adicionadas.");
+  } catch (err) {
+    if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
+    else throw err;
+  }
+  // --- FIM DA MIGRAÇÃO ---
 }
+
+// ****** "SEGURANÇA" (Middleware) ******
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; 
+  if (token == null) return res.sendStatus(401); 
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.error('Erro de token:', err.message);
+      return res.sendStatus(403); 
+    }
+    req.user = user;
+    next(); 
+  });
+}
+
+// ****** "SEGURANÇA MASTER" (Middleware) ******
+function authenticateMaster(req, res, next) {
+  if (req.user.role !== 'master') {
+    return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master.' });
+  }
+  next();
+}
+
 
 // --- ROTAS DE AUTENTICAÇÃO ---
 app.post('/register', async (req, res) => {
@@ -119,21 +150,6 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-// ****** NOSSO "SEGURANÇA" (Middleware) ******
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; 
-  if (token == null) return res.sendStatus(401); 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('Erro de token:', err.message);
-      return res.sendStatus(403); 
-    }
-    req.user = user;
-    next(); 
-  });
-}
 
 // --- ROTAS DE LANÇAMENTOS (PROTEGIDAS) ---
 app.get('/lancamentos', authenticateToken, async (req, res) => { 
@@ -207,14 +223,13 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
-// 3. ****** CORREÇÃO FINAL NO DELETE (Do passo 153) ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
-    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]); // Busca em 'lancamentos'
+    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]);
     if (lancamentoResult.rowCount > 0) {
       const lancamento = lancamentoResult.rows[0];
-      if (lancamento.caminhonf) { // Nome correto da coluna
+      if (lancamento.caminhonf) {
         fs.unlink(path.join(__dirname, 'uploads', lancamento.caminhonf), (err) => {
           if (err) console.error("Erro ao deletar arquivo:", err);
         });
@@ -225,6 +240,94 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
     res.status(204).send(); 
   } catch(e){ console.error("Erro no DELETE:", e); res.status(500).json({error: e.message}) } 
 });
+
+
+// ****** NOVAS ROTAS DE ADMIN PARA GERENCIAR MOTORISTAS ******
+// (Protegidas por 'authenticateToken' E 'authenticateMaster')
+
+// GET: Listar todos os motoristas
+app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role = 'motorista' ORDER BY nome_completo");
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar motoristas:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// POST: Criar um novo motorista
+app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { username, password, nome_completo, cpf, cnh, placa_cavalo, placas_carretas } = req.body;
+    if (!username || !password || !nome_completo) {
+      return res.status(400).json({ error: 'Login, senha e nome completo são obrigatórios.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const result = await db.query(
+      `INSERT INTO users (username, password, role, nome_completo, cpf, cnh, placa_cavalo, placas_carretas) 
+       VALUES ($1, $2, 'motorista', $3, $4, $5, $6, $7) RETURNING *`,
+      [username, hashedPassword, nome_completo, cpf, cnh, placa_cavalo, placas_carretas]
+    );
+    
+    const novoMotorista = result.rows[0];
+    delete novoMotorista.password; // Nunca retorne a senha, mesmo criptografada
+    res.status(201).json(novoMotorista);
+
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Esse nome de usuário (login) já existe.' });
+    console.error('Erro ao criar motorista:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// PUT: Editar um motorista
+app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome_completo, cpf, cnh, placa_cavalo, placas_carretas, password } = req.body;
+
+    if (password && password.length > 0) {
+      // Se uma nova senha foi fornecida ("redefinição de senha")
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await db.query(
+        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5, password = $6 
+         WHERE id = $7 AND role = 'motorista'`,
+        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, hashedPassword, id]
+      );
+    } else {
+      // Se não, atualiza só os outros dados
+      await db.query(
+        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5 
+         WHERE id = $6 AND role = 'motorista'`,
+        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, id]
+      );
+    }
+    
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    const motoristaAtualizado = result.rows[0];
+    delete motoristaAtualizado.password;
+    res.json(motoristaAtualizado);
+
+  } catch (err) {
+    console.error('Erro ao atualizar motorista:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// DELETE: Deletar um motorista
+app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM users WHERE id = $1 AND role = 'motorista'", [id]);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao deletar motorista:', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
 
 // Inicia o servidor
 setupDatabase().then(() => {
