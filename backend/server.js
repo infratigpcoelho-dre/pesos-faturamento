@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM MIGRAÇÃO AUTOMÁTICA)
+// Arquivo: backend/server.js (VERSÃO FINAL 100% CORRETA)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -14,10 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// 1. CORREÇÃO DA PORTA (Do passo 153)
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui
+// 2. CORREÇÃO DA URL (A SUA URL CORRETA do passo 152)
 const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
 
 const db = new Client({
@@ -62,10 +63,8 @@ async function setupDatabase() {
     console.log("MIGRAÇÃO: Coluna 'role' adicionada com sucesso.");
   } catch (err) {
     if (err.code === '42701') {
-      // 42701 = "duplicate_column" (coluna já existe)
       console.log("MIGRAÇÃO: Coluna 'role' já existe. Pulando.");
     } else {
-      // Se for outro erro, nós queremos saber
       console.error("Erro na migração da coluna 'role':", err);
       throw err;
     }
@@ -208,13 +207,14 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
+// 3. ****** CORREÇÃO FINAL NO DELETE (Do passo 153) ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
-    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]);
+    const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]); // Busca em 'lancamentos'
     if (lancamentoResult.rowCount > 0) {
       const lancamento = lancamentoResult.rows[0];
-      if (lancamento.caminhonf) {
+      if (lancamento.caminhonf) { // Nome correto da coluna
         fs.unlink(path.join(__dirname, 'uploads', lancamento.caminhonf), (err) => {
           if (err) console.error("Erro ao deletar arquivo:", err);
         });

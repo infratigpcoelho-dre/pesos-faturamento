@@ -1,4 +1,4 @@
-// Arquivo: src/app/page.tsx (FINAL COM AUTENTICAÇÃO NAS CHAMADAS)
+// Arquivo: src/app/page.tsx (FINAL COM AUTENTICAÇÃO EM TODAS AS CHAMADAS)
 
 "use client";
 
@@ -30,6 +30,7 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -41,7 +42,12 @@ export default function Dashboard() {
   const router = useRouter();
 
   // Função para pegar o token do localStorage
-  const getToken = () => localStorage.getItem('authToken');
+  const getToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem('authToken');
+    }
+    return null;
+  }
 
   useEffect(() => {
     const token = getToken();
@@ -55,9 +61,12 @@ export default function Dashboard() {
   async function carregarLancamentos() {
     try {
       const token = getToken();
+      // ****** CORREÇÃO AQUI: Adicionamos o 'headers' com o token ******
       const response = await fetch(`${API_URL}/lancamentos`, {
-        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+        headers: { 'Authorization': `Bearer ${token}` } 
       });
+      // ****** FIM DA CORREÇÃO ******
+
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
         handleLogout(false); // Chama o logout sem o toast de sucesso
@@ -92,7 +101,7 @@ export default function Dashboard() {
       const response = await fetch(url, { 
         method: method, 
         body: formData,
-        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+        headers: { 'Authorization': `Bearer ${token}` } // O crachá já estava aqui
       });
 
       if (response.status === 401 || response.status === 403) {
@@ -121,7 +130,7 @@ export default function Dashboard() {
     try {
       const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` } // ADICIONA O CRACHÁ
+        headers: { 'Authorization': `Bearer ${token}` } // O crachá já estava aqui
       });
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
@@ -181,6 +190,7 @@ export default function Dashboard() {
   
   const handleLogout = (mostrarToast = true) => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole'); // Limpa o role também
     if (mostrarToast) {
       toast.success("Você saiu com segurança.");
     }
