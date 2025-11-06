@@ -1,8 +1,8 @@
-// Arquivo: src/app/admin/page.tsx (A PÁGINA PRINCIPAL DO MASTER)
+// Arquivo: src/app/admin/page.tsx (LINK ATUALIZADO)
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react"; // Adicionamos ícone
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -25,9 +25,11 @@ export default function AdminDashboard() {
         <CardContent>
           <p>Bem-vindo, Mestre! Esta é a sua área de administração.</p>
           <div className="mt-4">
-            {/* O link para motoristas ainda não existe, mas vamos deixar preparado */}
-            <Button asChild variant="outline">
-              <Link href="#">Gerenciar Motoristas (em breve)</Link>
+            {/* AGORA O LINK FUNCIONA */}
+            <Button asChild>
+              <Link href="/admin/motoristas">
+                <Users className="mr-2 h-4 w-4" /> Gerenciar Motoristas
+              </Link>
             </Button>
           </div>
         </CardContent>
