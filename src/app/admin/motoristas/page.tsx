@@ -1,4 +1,4 @@
-// Arquivo: src/app/admin/motoristas/page.tsx (NOVA PÁGINA)
+// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO)
 
 "use client";
 
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { MotoristaDialog } from "@/components/app/MotoristaDialog"; // Importamos o novo formulário
+import { MotoristaDialog } from "@/components/app/MotoristaDialog";
 
 // O tipo para os dados do motorista (usuário)
 type Motorista = {
@@ -25,6 +25,7 @@ type Motorista = {
   role: string;
 };
 
+// O tipo para os dados do formulário
 type FormData = { [key: string]: string | number | undefined; };
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
@@ -32,12 +33,14 @@ const API_URL = 'https://api-pesos-faturamento.onrender.com';
 export default function GerenciarMotoristasPage() {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [motoristaParaEditar, setMotoristaParaEditar] = useState<FormData | null>(null);
+  
+  // ****** CORREÇÃO DE TIPO 1 ******
+  // O estado agora espera um 'Motorista' (o tipo real que vem da tabela) ou 'null'
+  const [motoristaParaEditar, setMotoristaParaEditar] = useState<Motorista | null>(null);
   const router = useRouter();
 
   const getToken = () => localStorage.getItem('authToken');
 
-  // Busca os motoristas do backend
   async function carregarMotoristas() {
     try {
       const token = getToken();
@@ -50,10 +53,19 @@ export default function GerenciarMotoristasPage() {
         return;
       }
       if (!response.ok) throw new Error('Falha ao buscar motoristas');
+      
       const data = await response.json();
       setMotoristas(data);
-    } catch (error) {
-      toast.error("Não foi possível carregar os motoristas.");
+    } catch (error: unknown) { // Corrigido para 'unknown'
+      console.error("Erro ao carregar motoristas:", error);
+      // Aqui tratamos o erro "is not valid JSON"
+      if (error instanceof SyntaxError) {
+        toast.error("Erro de comunicação com o servidor. A resposta não é um JSON válido.");
+      } else if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Não foi possível carregar os motoristas.");
+      }
     }
   }
 
@@ -61,18 +73,17 @@ export default function GerenciarMotoristasPage() {
     carregarMotoristas();
   }, []);
 
-  // Lida com Salvar (Criar ou Editar)
   const handleSalvarMotorista = async (dadosDoFormulario: FormData) => {
     const token = getToken();
     const isEditing = !!motoristaParaEditar;
     
+    // O 'id' vem do estado 'motoristaParaEditar', não do formulário
     const url = isEditing
       ? `${API_URL}/api/motoristas/${motoristaParaEditar.id}`
       : `${API_URL}/api/motoristas`;
     
     const method = isEditing ? 'PUT' : 'POST';
 
-    // Remove a senha se estiver vazia (para não atualizar)
     if (isEditing && (!dadosDoFormulario.password || dadosDoFormulario.password === '')) {
       delete dadosDoFormulario.password;
     }
@@ -91,7 +102,7 @@ export default function GerenciarMotoristasPage() {
       
       toast.success(`Motorista ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
-      carregarMotoristas(); // Recarrega a lista
+      carregarMotoristas();
 
     } catch (error: unknown) {
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o motorista.`;
@@ -100,7 +111,6 @@ export default function GerenciarMotoristasPage() {
     }
   };
 
-  // Lida com Deletar
   const handleDeletarMotorista = async (idParaDeletar: number) => {
     const token = getToken();
     if (!window.confirm("Tem certeza que deseja excluir este motorista? Esta ação é permanente.")) return;
@@ -112,8 +122,10 @@ export default function GerenciarMotoristasPage() {
       if (!response.ok) throw new Error('Falha ao deletar motorista');
       setMotoristas(motoristas.filter((m) => m.id !== idParaDeletar));
       toast.success("Motorista excluído com sucesso!");
-    } catch (error) {
-      toast.error("Não foi possível excluir o motorista.");
+    } catch (error: unknown) {
+      let message = "Não foi possível excluir o motorista.";
+      if (error instanceof Error) message = error.message;
+      toast.error(message);
     }
   };
 
@@ -123,6 +135,7 @@ export default function GerenciarMotoristasPage() {
   };
   
   const handleAbrirDialogParaEditar = (motorista: Motorista) => {
+    // Agora os tipos são compatíveis!
     setMotoristaParaEditar(motorista);
     setIsDialogOpen(true);
   };
@@ -186,11 +199,19 @@ export default function GerenciarMotoristasPage() {
         </CardContent>
       </Card>
       
+      {/* ****** CORREÇÃO DE TIPO 2 ******
+          O 'MotoristaDialog' espera 'initialData' do tipo 'FormData | null'
+          mas nosso estado 'motoristaParaEditar' é 'Motorista | null'.
+          Não há problema, pois 'Motorista' é compatível com a estrutura de 'FormData'.
+          O TypeScript estava certo em avisar, mas o código anterior estava funcional,
+          embora gerasse o erro de tipo.
+          A mudança no 'useState' para 'Motorista | null' é a mais correta.
+      */}
       <MotoristaDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSave={handleSalvarMotorista}
-        initialData={motoristaParaEditar}
+        initialData={motoristaParaEditar} 
       />
     </main>
   );
