@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 // ATENÇÃO: Confirme que esta é a sua URL do RENDER
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
+const API_URL = 'https://local:3000/login'; 
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
