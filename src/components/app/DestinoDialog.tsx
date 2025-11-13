@@ -38,7 +38,7 @@ export function DestinoDialog({ isOpen, onOpenChange, onSave, initialData }: Des
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Destino" : "Adicionar Novo Destino"}</DialogTitle>
-          <DialogDescription>{isEditing ? "Altere o nome do destino." : "Digite o nome do novo destino."}</DialogDescription>
+          <DialogDescription>{isEditing ? "Altere o nome." : "Digite o nome do novo destino."}</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-4 py-4">
           <div className="space-y-2">

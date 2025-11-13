@@ -41,7 +41,9 @@ export default function GerenciarDestinosPage() {
     const url = isEditing ? `${API_URL}/api/destinos/${destinoParaEditar.id}` : `${API_URL}/api/destinos`;
     const method = isEditing ? 'PUT' : 'POST';
     try {
-      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(dados) });
+      const response = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(dados)
+      });
       if (!response.ok) throw new Error();
       toast.success(`Destino ${isEditing ? 'atualizado' : 'salvo'}!`);
       setIsDialogOpen(false);
@@ -52,7 +54,9 @@ export default function GerenciarDestinosPage() {
   const handleDeletar = async (id: number) => {
     if (!confirm("Excluir este destino?")) return;
     try {
-      const response = await fetch(`${API_URL}/api/destinos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
+      const response = await fetch(`${API_URL}/api/destinos/${id}`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
       if (!response.ok) throw new Error();
       setDestinos(destinos.filter((d) => d.id !== id));
       toast.success("Excluído!");
@@ -63,10 +67,10 @@ export default function GerenciarDestinosPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" asChild><Link href="/admin"><ArrowLeft className="h-4 w-4" /></Link></Button>
+          <Button variant="outline" size="icon" asChild><Link href="/admin"><ArrowLeft className="h-4 w-4" /><span className="sr-only">Voltar</span></Link></Button>
           <h1 className="text-2xl font-bold tracking-tight">Gerenciar Destinos</h1>
         </div>
-        <Button onClick={() => { setDestinoParaEditar(null); setIsDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar</Button>
+        <Button onClick={() => { setDestinoParaEditar(null); setIsDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Destino</Button>
       </div>
       <Card><CardHeader><CardTitle>Destinos ({destinos.length})</CardTitle></CardHeader><CardContent>
           <div className="relative w-full overflow-auto">

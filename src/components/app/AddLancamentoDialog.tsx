@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (ATUALIZADO PARA PREENCHER O MOTORISTA)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (COM DROPDOWNS DINÂMICOS)
 
 "use client";
 
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner"; // Importamos o toast para erros de carregamento
 
 type FormData = { [key: string]: string | number; };
 type InitialData = {
@@ -17,47 +18,45 @@ type InitialData = {
   caminhonf?: string | null;
 } | null;
 
+// Tipo para os itens das listas
+type Opcao = { id: number; nome: string; };
 
 type LancamentoDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: FormData, arquivo: File | null) => void; 
   initialData?: InitialData;
-  // ****** MUDANÇA 1: Recebendo os novos props ******
   userRole: string | null;
   userName: string | null;
 };
 
-// Funções de formatação (formatarParaDateTimeLocal, formatarParaDate)
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
+const API_URL = 'https://api-pesos-faturamento.onrender.com';
+
+// Funções de formatação
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
-  } catch (e) {
-    return "";
-  }
+  } catch (e) { return ""; }
 }
+
 const formatarParaDate = (dataString: string | number | null | undefined) => {
   if (!dataString) return "";
   try {
     const data = new Date(dataString);
     return data.toISOString().split('T')[0];
-  } catch (e) {
-    return "";
-  }
+  } catch (e) { return ""; }
 }
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData, userRole, userName }: LancamentoDialogProps) {
   
-  // ****** MUDANÇA 2: O estado inicial agora usa o nome do usuário ******
   const getInitialState = () => ({
-    data: new Date().toISOString().split('T')[0], 
-    horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    data: new Date().toISOString().split('T')[0], horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
     origem: "", destino: "", iniciodescarga: "", terminodescarga: "", tempodescarga: "",
     ticket: "", pesoreal: "", tarifa: "", nf: "", cavalo: "", 
-    // Se for master, campo em branco. Se for motorista, preenche o nome.
     motorista: userRole === 'master' ? "" : (userName || ""), 
     valorfrete: "", obs: "", produto: ""
   });
@@ -65,10 +64,39 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
   const [formData, setFormData] = useState<FormData>(getInitialState());
   const [arquivoNf, setArquivoNf] = useState<File | null>(null);
 
+  // Novos estados para as listas
+  const [listaProdutos, setListaProdutos] = useState<Opcao[]>([]);
+  const [listaOrigens, setListaOrigens] = useState<Opcao[]>([]);
+  const [listaDestinos, setListaDestinos] = useState<Opcao[]>([]);
+
+  // Função para carregar as listas
+  useEffect(() => {
+    if (isOpen) {
+      const token = localStorage.getItem('authToken');
+      
+      const fetchDados = async (endpoint: string, setEstado: (dados: Opcao[]) => void) => {
+        try {
+          const res = await fetch(`${API_URL}/api/${endpoint}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setEstado(data);
+          }
+        } catch (error) {
+          console.error(`Erro ao carregar ${endpoint}`);
+        }
+      };
+
+      fetchDados('produtos', setListaProdutos);
+      fetchDados('origens', setListaOrigens);
+      fetchDados('destinos', setListaDestinos);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // Lógica para preencher o formulário para EDIÇÃO
         const dadosCorrigidos: FormData = {} as FormData;
         Object.keys(initialData).forEach(key => {
           const valor = initialData[key as keyof typeof initialData];
@@ -79,22 +107,19 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
         dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
         dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
-        // Se o usuário for 'master', ele pode editar o nome.
-        // Se for motorista, o nome é travado para o nome dele (mesmo na edição).
         if (userRole !== 'master') {
           dadosCorrigidos.motorista = userName || "";
         }
 
         setFormData(dadosCorrigidos);
       } else {
-        // Lógica para preencher o formulário para CRIAÇÃO
         setFormData(getInitialState());
       }
       setArquivoNf(null); 
     }
-  }, [initialData, isOpen, userName, userRole]); // Adicionamos userName e userRole nas dependências
+  }, [initialData, isOpen, userName, userRole]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prevState => ({ ...prevState, [name]: value }));
   };
@@ -114,6 +139,9 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
   const isEditing = !!initialData;
   const currentFileName = initialData?.caminhonf;
 
+  // Estilo padrão para inputs e selects ficarem iguais
+  const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -123,35 +151,78 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+          
+          {/* COLUNA 1 */}
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label htmlFor="horapostada">Hora Postada</Label><Input id="horapostada" name="horapostada" type="time" value={String(formData.horapostada)} onChange={handleChange} /></div>
-            
-            {/* ****** MUDANÇA 3: O CAMPO MOTORISTA AGORA É TRAVADO ****** */}
             <div>
               <Label htmlFor="motorista">Motorista</Label>
-              <Input 
-                id="motorista" 
-                name="motorista" 
-                value={String(formData.motorista)} 
-                onChange={handleChange} 
-                // Se o usuário NÃO for 'master', o campo é desabilitado
-                disabled={userRole !== 'master'}
-                readOnly={userRole !== 'master'}
-              />
+              <Input id="motorista" name="motorista" value={String(formData.motorista)} onChange={handleChange} disabled={userRole !== 'master'} readOnly={userRole !== 'master'}/>
             </div>
-            {/* ****** FIM DA MUDANÇA ****** */}
-
             <div><Label htmlFor="cavalo">Cavalo (Placa)</Label><Input id="cavalo" name="cavalo" value={String(formData.cavalo)} onChange={handleChange} /></div>
             <div><Label htmlFor="ticket">Ticket</Label><Input id="ticket" name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
           </div>
+
+          {/* COLUNA 2 (COM OS NOVOS SELECTS) */}
           <div className="space-y-4">
-            <div><Label htmlFor="produto">Produto</Label><Input id="produto" name="produto" value={String(formData.produto)} onChange={handleChange} placeholder="Soja, Milho..."/></div>
-            <div><Label htmlFor="origem">Origem</Label><Input id="origem" name="origem" value={String(formData.origem)} onChange={handleChange} /></div>
-            <div><Label htmlFor="destino">Destino</Label><Input id="destino" name="destino" value={String(formData.destino)} onChange={handleChange} /></div>
+            
+            {/* PRODUTO: Agora é um Select */}
+            <div>
+              <Label htmlFor="produto">Produto</Label>
+              <select 
+                id="produto" 
+                name="produto" 
+                value={String(formData.produto)} 
+                onChange={handleChange} 
+                className={inputClass}
+              >
+                <option value="">Selecione...</option>
+                {listaProdutos.map((item) => (
+                  <option key={item.id} value={item.nome}>{item.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ORIGEM: Agora é um Select */}
+            <div>
+              <Label htmlFor="origem">Origem</Label>
+              <select 
+                id="origem" 
+                name="origem" 
+                value={String(formData.origem)} 
+                onChange={handleChange} 
+                className={inputClass}
+              >
+                <option value="">Selecione...</option>
+                {listaOrigens.map((item) => (
+                  <option key={item.id} value={item.nome}>{item.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* DESTINO: Agora é um Select */}
+            <div>
+              <Label htmlFor="destino">Destino</Label>
+              <select 
+                id="destino" 
+                name="destino" 
+                value={String(formData.destino)} 
+                onChange={handleChange} 
+                className={inputClass}
+              >
+                <option value="">Selecione...</option>
+                {listaDestinos.map((item) => (
+                  <option key={item.id} value={item.nome}>{item.nome}</option>
+                ))}
+              </select>
+            </div>
+
             <div><Label htmlFor="pesoreal">Peso Real (kg)</Label><Input id="pesoreal" name="pesoreal" type="number" value={String(formData.pesoreal)} onChange={handleChange} /></div>
             <div><Label htmlFor="nf">Nota Fiscal (Nº)</Label><Input id="nf" name="nf" value={String(formData.nf)} onChange={handleChange} /></div>
           </div>
+
+          {/* COLUNA 3 */}
           <div className="space-y-4">
             <div><Label htmlFor="iniciodescarga">Início Descarga</Label><Input id="iniciodescarga" name="iniciodescarga" type="datetime-local" value={String(formData.iniciodescarga)} onChange={handleChange} /></div>
             <div><Label htmlFor="terminodescarga">Término Descarga</Label><Input id="terminodescarga" name="terminodescarga" type="datetime-local" value={String(formData.terminodescarga)} onChange={handleChange} /></div>

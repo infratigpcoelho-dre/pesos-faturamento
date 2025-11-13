@@ -44,25 +44,15 @@ export function OrigemDialog({ isOpen, onOpenChange, onSave, initialData }: Orig
   useEffect(() => {
     if (isOpen) {
       if (isEditing && initialData) {
-        const dadosLimpados: FormData = {
+        setFormData({
           id: initialData.id,
           nome: initialData.nome ?? "",
-        };
-        setFormData(dadosLimpados);
+        });
       } else {
         setFormData(getInitialState());
       }
     }
   }, [initialData, isOpen, isEditing]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({ ...prevState, [name]: value }));
-  };
-
-  const handleSubmit = () => {
-    onSave(formData);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -70,19 +60,17 @@ export function OrigemDialog({ isOpen, onOpenChange, onSave, initialData }: Orig
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Origem" : "Adicionar Nova Origem"}</DialogTitle>
           <DialogDescription>
-            {isEditing ? "Altere o nome da origem." : "Digite o nome da nova origem (Usina, Fazenda, etc)."}
+            {isEditing ? "Altere o nome da origem." : "Digite o nome da nova origem."}
           </DialogDescription>
         </DialogHeader>
-
         <div className="grid grid-cols-1 gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="nome">Nome da Origem</Label>
-            <Input id="nome" name="nome" value={formData.nome} onChange={handleChange} placeholder="Ex: Usina Enersugar..." />
+            <Input id="nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Ex: Fazenda Santa Maria..." />
           </div>
         </div>
-        
         <DialogFooter>
-          <Button type="submit" onClick={handleSubmit}>Salvar Origem</Button>
+          <Button onClick={() => onSave(formData)}>Salvar Origem</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
