@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE PRODUTOS)
+// Arquivo: backend/server.js (VERSÃO FINAL COM 'NOME' NO LOGIN)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -16,9 +16,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
-
 // ATENÇÃO: Confirme que sua URL do Render está aqui
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -54,22 +53,34 @@ async function setupDatabase() {
     )
   `);
 
-  // ****** NOVA TABELA DE PRODUTOS ******
   await db.query(`
     CREATE TABLE IF NOT EXISTS produtos (
       id SERIAL PRIMARY KEY,
       nome TEXT UNIQUE NOT NULL
     )
   `);
-  // ****** FIM DA NOVA TABELA ******
-
+  
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS origens (
+      id SERIAL PRIMARY KEY,
+      nome TEXT UNIQUE NOT NULL
+    )
+  `);
+  
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS destinos (
+      id SERIAL PRIMARY KEY,
+      nome TEXT UNIQUE NOT NULL
+    )
+  `);
+  
   // --- MIGRAÇÃO AUTOMÁTICA (Garante que as colunas existem) ---
   try {
     await db.query(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'motorista'`);
     console.log("MIGRAÇÃO: Coluna 'role' adicionada.");
   } catch (err) {
     if (err.code === '42701') console.log("MIGRAÇÃO: Coluna 'role' já existe.");
-    else if (err.code !== 'ENOTFOUND') throw err; // Ignora erros de DB temporários
+    else if (err.code !== 'ENOTFOUND') throw err;
   }
   
   try {
@@ -81,11 +92,11 @@ async function setupDatabase() {
     console.log("MIGRAÇÃO: Colunas de motorista adicionadas.");
   } catch (err) {
     if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
-    else if (err.code !== 'ENOTFOUND') throw err; // Ignora erros de DB temporários
+    else if (err.code !== 'ENOTFOUND') throw err;
   }
 }
 
-// --- Middlewares de Segurança (sem mudanças) ---
+// --- Middlewares de Segurança ---
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; 
@@ -121,12 +132,12 @@ app.post('/register', async (req, res) => {
 
 app.post('/register-master', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+    const { username, password, nome_completo } = req.body;
+    if (!username || !password || !nome_completo) return res.status(400).json({ error: 'Login, senha e nome completo são obrigatórios.' });
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await db.query(
-      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', 
-      [username, hashedPassword, 'master']
+      'INSERT INTO users (username, password, role, nome_completo) VALUES ($1, $2, $3, $4) RETURNING id, username, role', 
+      [username, hashedPassword, 'master', nome_completo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -144,8 +155,26 @@ app.post('/login', async (req, res) => {
     const user = result.rows[0];
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-    res.json({ message: 'Login bem-sucedido!', token, role: user.role });
+    
+    // ATUALIZADO: Token agora inclui o 'nome_completo'
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        nome_completo: user.nome_completo // Adicionamos o nome
+      }, 
+      JWT_SECRET, 
+      { expiresIn: '8h' }
+    );
+    
+    // ATUALIZADO: Devolve o 'role' E o 'nome_completo' para o frontend
+    res.json({ 
+      message: 'Login bem-sucedido!', 
+      token, 
+      role: user.role, 
+      nome_completo: user.nome_completo 
+    });
   } catch (err) {
     console.error('Erro no login:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -161,7 +190,6 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
     res.status(500).json({e}) 
   } 
 });
-
 app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -175,7 +203,6 @@ app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
-
 app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   try { 
     const dados = req.body;
@@ -193,7 +220,6 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
     res.status(201).json(r.rows[0]); 
   } catch(e){ console.error("Erro no POST:", e); res.status(500).json({error: e.message}) } 
 });
-
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   try { 
     const { id } = req.params;
@@ -223,7 +249,6 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     res.json(r.rows[0]); 
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
-
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
@@ -252,7 +277,6 @@ app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, re
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { username, password, nome_completo, cpf, cnh, placa_cavalo, placas_carretas } = req.body;
@@ -274,7 +298,6 @@ app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, r
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
@@ -302,7 +325,6 @@ app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
@@ -314,11 +336,7 @@ app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (
   }
 });
 
-
-// ****** NOVAS ROTAS PARA GERENCIAR PRODUTOS ******
-// (Protegidas por 'authenticateToken' E 'authenticateMaster')
-
-// GET: Listar todos os produtos (Qualquer usuário logado pode ver)
+// --- ROTAS DE PRODUTOS ---
 app.get('/api/produtos', authenticateToken, async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM produtos ORDER BY nome");
@@ -328,16 +346,11 @@ app.get('/api/produtos', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-// POST: Criar um novo produto (Apenas 'master')
 app.post('/api/produtos', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { nome } = req.body;
     if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
-    
-    const result = await db.query(
-      `INSERT INTO produtos (nome) VALUES ($1) RETURNING *`, [nome]
-    );
+    const result = await db.query(`INSERT INTO produtos (nome) VALUES ($1) RETURNING *`, [nome]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Esse produto já existe.' });
@@ -345,18 +358,12 @@ app.post('/api/produtos', authenticateToken, authenticateMaster, async (req, res
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-// PUT: Editar um produto (Apenas 'master')
 app.put('/api/produtos/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
     const { nome } = req.body;
     if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
-
-    const result = await db.query(
-      `UPDATE produtos SET nome = $1 WHERE id = $2 RETURNING *`,
-      [nome, id]
-    );
+    const result = await db.query(`UPDATE produtos SET nome = $1 WHERE id = $2 RETURNING *`, [nome, id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Produto não encontrado.' });
     res.json(result.rows[0]);
   } catch (err) {
@@ -365,8 +372,6 @@ app.put('/api/produtos/:id', authenticateToken, authenticateMaster, async (req, 
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-// DELETE: Deletar um produto (Apenas 'master')
 app.delete('/api/produtos/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
@@ -378,6 +383,81 @@ app.delete('/api/produtos/:id', authenticateToken, authenticateMaster, async (re
   }
 });
 
+// --- ROTAS DE ORIGENS E DESTINOS ---
+app.get('/api/origens', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM origens ORDER BY nome");
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
+});
+app.post('/api/origens', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+    const result = await db.query(`INSERT INTO origens (nome) VALUES ($1) RETURNING *`, [nome]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Essa origem já existe.' });
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+app.put('/api/origens/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+    const result = await db.query(`UPDATE origens SET nome = $1 WHERE id = $2 RETURNING *`, [nome, id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Origem não encontrada.' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Essa origem já existe.' });
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+app.delete('/api/origens/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM origens WHERE id = $1", [id]);
+    res.status(204).send();
+  } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
+});
+app.get('/api/destinos', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM destinos ORDER BY nome");
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
+});
+app.post('/api/destinos', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+    const result = await db.query(`INSERT INTO destinos (nome) VALUES ($1) RETURNING *`, [nome]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Esse destino já existe.' });
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+app.put('/api/destinos/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'O nome é obrigatório.' });
+    const result = await db.query(`UPDATE destinos SET nome = $1 WHERE id = $2 RETURNING *`, [nome, id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Destino não encontrado.' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Esse destino já existe.' });
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM destinos WHERE id = $1", [id]);
+    res.status(204).send();
+  } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
+});
 
 // Inicia o servidor
 setupDatabase().then(() => {
