@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (COM PREENCHIMENTO DE PLACA)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORREÇÃO DE TRAVAMENTO INTELIGENTE)
 
 "use client";
 
@@ -26,7 +26,7 @@ type LancamentoDialogProps = {
   initialData?: InitialData;
   userRole: string | null;
   userName: string | null;
-  userPlaca: string | null; // MUDANÇA: Nova prop
+  userPlaca: string | null;
 };
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
@@ -54,9 +54,12 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
     data: new Date().toISOString().split('T')[0], horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
     origem: "", destino: "", iniciodescarga: "", terminodescarga: "", tempodescarga: "",
     ticket: "", pesoreal: "", tarifa: "", nf: "", 
-    // MUDANÇA: Preenche a placa também
-    cavalo: userRole === 'master' ? "" : (userPlaca || ""), 
+    
+    // Lógica inteligente de preenchimento:
+    // Se tiver placa no cadastro, usa ela. Senão, vazio.
+    cavalo: userRole !== 'master' && userPlaca ? userPlaca : "", 
     motorista: userRole === 'master' ? "" : (userName || ""), 
+    
     valorfrete: "", obs: "", produto: ""
   });
 
@@ -94,9 +97,11 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
         dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
         dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
+        // Mantém a lógica de travamento na edição também
         if (userRole !== 'master') {
           dadosCorrigidos.motorista = userName || "";
-          dadosCorrigidos.cavalo = userPlaca || ""; // MUDANÇA: Garante a placa na edição
+          // Só sobrescreve se tiver placa cadastrada
+          if (userPlaca) dadosCorrigidos.cavalo = userPlaca;
         }
 
         setFormData(dadosCorrigidos);
@@ -134,20 +139,22 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
           <div className="space-y-4">
             <div><Label>Data</Label><Input name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label>Hora Postada</Label><Input name="horapostada" type="time" value={String(formData.horapostada)} onChange={handleChange} /></div>
+            
             <div>
               <Label>Motorista</Label>
               <Input name="motorista" value={String(formData.motorista)} onChange={handleChange} disabled={userRole !== 'master'} readOnly={userRole !== 'master'} />
             </div>
             
-            {/* MUDANÇA: CAMPO CAVALO TRAVADO PARA NÃO-MASTERS */}
+            {/* MUDANÇA: SÓ TRAVA SE TIVER UMA PLACA CADASTRADA! */}
             <div>
               <Label>Cavalo (Placa)</Label>
               <Input 
                 name="cavalo" 
                 value={String(formData.cavalo)} 
                 onChange={handleChange} 
-                disabled={userRole !== 'master'} 
-                readOnly={userRole !== 'master'}
+                // Se não for master E tiver placa, trava. Se não tiver placa, libera para digitar.
+                disabled={userRole !== 'master' && !!userPlaca} 
+                readOnly={userRole !== 'master' && !!userPlaca}
               />
             </div>
 
