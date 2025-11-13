@@ -1,4 +1,4 @@
-// Arquivo: src/app/login/page.tsx (ATUALIZADO PARA SALVAR O 'ROLE')
+// Arquivo: src/app/login/page.tsx (ATUALIZADO PARA SALVAR NOME E ROLE)
 
 "use client";
 
@@ -34,9 +34,10 @@ export default function LoginPage() {
       }
 
       // ****** AQUI ESTÁ A MUDANÇA ******
-      // Agora salvamos as DUAS informações que o backend nos deu
+      // Salvamos TUDO que precisamos do backend
       localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userRole', data.role); // Salvamos o nível de acesso
+      localStorage.setItem('userRole', data.role); 
+      localStorage.setItem('userFullName', data.nome_completo); // SALVAMOS O NOME COMPLETO
       // ****** FIM DA MUDANÇA ******
 
       toast.success('Login bem-sucedido!');
@@ -57,7 +58,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <Image
-            src="/LogoSF.png" // Assumindo que seu logo está correto
+            src="/LogoSF.png"
             alt="Logo da Empresa"
             width={200}
             height={200}
@@ -68,7 +69,7 @@ export default function LoginPage() {
             Entre com seu usuário e senha para acessar.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="username">Usuário</Label>
             <Input id="username" type="text" placeholder="seu.usuario" required value={username} onChange={(e) => setUsername(e.target.value)} />

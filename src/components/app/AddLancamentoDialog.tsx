@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORRIGIDO PARA VALORES NULOS E NOMES MINÚSCULOS)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (ATUALIZADO PARA PREENCHER O MOTORISTA)
 
 "use client";
 
@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type FormData = { [key: string]: string | number; };
-
-// O tipo que vem do backend (com 'null' e nomes em minúsculo)
 type InitialData = {
   id: number; data: string | null; horapostada: string | null; origem: string | null; destino: string | null;
   iniciodescarga: string | null; terminodescarga: string | null; tempodescarga: string | null;
@@ -25,24 +23,24 @@ type LancamentoDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: FormData, arquivo: File | null) => void; 
   initialData?: InitialData;
+  // ****** MUDANÇA 1: Recebendo os novos props ******
+  userRole: string | null;
+  userName: string | null;
 };
 
-// Função para formatar a data para o input datetime-local
+// Funções de formatação (formatarParaDateTimeLocal, formatarParaDate)
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
-  if (!dataString) return ""; // Retorna string vazia se for null/undefined
+  if (!dataString) return "";
   try {
     const data = new Date(dataString);
-    // Ajusta para o fuso horário local e formata
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
   } catch (e) {
-    return ""; // Retorna vazio se a data for inválida
+    return "";
   }
 }
-
-// Função para formatar a data para o input date
 const formatarParaDate = (dataString: string | number | null | undefined) => {
-  if (!dataString) return ""; // Retorna string vazia se for null/undefined
+  if (!dataString) return "";
   try {
     const data = new Date(dataString);
     return data.toISOString().split('T')[0];
@@ -51,11 +49,17 @@ const formatarParaDate = (dataString: string | number | null | undefined) => {
   }
 }
 
-export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData }: LancamentoDialogProps) {
+export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData, userRole, userName }: LancamentoDialogProps) {
+  
+  // ****** MUDANÇA 2: O estado inicial agora usa o nome do usuário ******
   const getInitialState = () => ({
-    data: new Date().toISOString().split('T')[0], horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    data: new Date().toISOString().split('T')[0], 
+    horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
     origem: "", destino: "", iniciodescarga: "", terminodescarga: "", tempodescarga: "",
-    ticket: "", pesoreal: "", tarifa: "", nf: "", cavalo: "", motorista: "", valorfrete: "", obs: "", produto: ""
+    ticket: "", pesoreal: "", tarifa: "", nf: "", cavalo: "", 
+    // Se for master, campo em branco. Se for motorista, preenche o nome.
+    motorista: userRole === 'master' ? "" : (userName || ""), 
+    valorfrete: "", obs: "", produto: ""
   });
 
   const [formData, setFormData] = useState<FormData>(getInitialState());
@@ -64,30 +68,31 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // ****** AQUI ESTÁ A CORREÇÃO ******
-        // Criamos um objeto 'dadosLimpados'
-        const dadosLimpados: FormData = {} as FormData;
-        
-        // Copiamos todos os campos, trocando 'null' por '""'
+        // Lógica para preencher o formulário para EDIÇÃO
+        const dadosCorrigidos: FormData = {} as FormData;
         Object.keys(initialData).forEach(key => {
           const valor = initialData[key as keyof typeof initialData];
-          dadosLimpados[key] = valor ?? ""; // ?? significa: "se for null ou undefined, use """
+          dadosCorrigidos[key] = valor ?? ""; 
         });
-
-        // Formatamos as datas especiais
-        dadosLimpados.data = formatarParaDate(initialData.data);
-        dadosLimpados.horapostada = initialData.horapostada ?? "";
-        dadosLimpados.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
-        dadosLimpados.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
+        dadosCorrigidos.data = formatarParaDate(initialData.data);
+        dadosCorrigidos.horapostada = initialData.horapostada ?? "";
+        dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
+        dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
-        setFormData(dadosLimpados);
-        // ****** FIM DA CORREÇÃO ******
+        // Se o usuário for 'master', ele pode editar o nome.
+        // Se for motorista, o nome é travado para o nome dele (mesmo na edição).
+        if (userRole !== 'master') {
+          dadosCorrigidos.motorista = userName || "";
+        }
+
+        setFormData(dadosCorrigidos);
       } else {
+        // Lógica para preencher o formulário para CRIAÇÃO
         setFormData(getInitialState());
       }
       setArquivoNf(null); 
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, userName, userRole]); // Adicionamos userName e userRole nas dependências
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -117,12 +122,26 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData 
           <DialogDescription>{isEditing ? "Altere as informações abaixo." : "Preencha todos os campos do carregamento."}</DialogDescription>
         </DialogHeader>
 
-        {/* O JSX agora usa os nomes em MINÚSCULO (horapostada, pesoreal, etc.) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
           <div className="space-y-4">
             <div><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label htmlFor="horapostada">Hora Postada</Label><Input id="horapostada" name="horapostada" type="time" value={String(formData.horapostada)} onChange={handleChange} /></div>
-            <div><Label htmlFor="motorista">Motorista</Label><Input id="motorista" name="motorista" value={String(formData.motorista)} onChange={handleChange} /></div>
+            
+            {/* ****** MUDANÇA 3: O CAMPO MOTORISTA AGORA É TRAVADO ****** */}
+            <div>
+              <Label htmlFor="motorista">Motorista</Label>
+              <Input 
+                id="motorista" 
+                name="motorista" 
+                value={String(formData.motorista)} 
+                onChange={handleChange} 
+                // Se o usuário NÃO for 'master', o campo é desabilitado
+                disabled={userRole !== 'master'}
+                readOnly={userRole !== 'master'}
+              />
+            </div>
+            {/* ****** FIM DA MUDANÇA ****** */}
+
             <div><Label htmlFor="cavalo">Cavalo (Placa)</Label><Input id="cavalo" name="cavalo" value={String(formData.cavalo)} onChange={handleChange} /></div>
             <div><Label htmlFor="ticket">Ticket</Label><Input id="ticket" name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
           </div>
