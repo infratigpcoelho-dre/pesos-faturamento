@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM 'NOME' NO LOGIN)
+// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE PRODUTOS)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -15,9 +15,10 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
-// ATENÇÃO: Confirme que sua URL do Render está aqui
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
+const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
+
+// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
+const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -96,7 +97,7 @@ async function setupDatabase() {
   }
 }
 
-// --- Middlewares de Segurança ---
+// --- Middlewares de Segurança (sem mudanças) ---
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; 
@@ -152,29 +153,20 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rowCount === 0) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
-    
     const user = result.rows[0];
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
-    
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        username: user.username, 
-        role: user.role,
-        nome_completo: user.nome_completo 
-      }, 
+      { id: user.id, username: user.username, role: user.role, nome_completo: user.nome_completo }, 
       JWT_SECRET, 
       { expiresIn: '8h' }
     );
-    
-    // MUDANÇA AQUI: Adicionamos 'placa_cavalo' na resposta
     res.json({ 
       message: 'Login bem-sucedido!', 
       token, 
       role: user.role, 
       nome_completo: user.nome_completo,
-      placa_cavalo: user.placa_cavalo // <--- NOVO CAMPO
+      placa_cavalo: user.placa_cavalo 
     });
   } catch (err) {
     console.error('Erro no login:', err);
@@ -459,6 +451,48 @@ app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (re
     res.status(204).send();
   } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
 });
+
+
+// ****** NOVAS ROTAS DE ANALYTICS (PAINEL MASTER) ******
+
+// GET: Soma de peso (pesoreal) agrupado por motorista
+app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        motorista, 
+        SUM(pesoreal) as total_peso
+      FROM lancamentos
+      WHERE motorista IS NOT NULL AND motorista != '' AND pesoreal > 0
+      GROUP BY motorista
+      ORDER BY total_peso DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar analytics (peso por motorista):', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
+// GET: Soma de valor (valorfrete) agrupado por produto
+app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateMaster, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        produto, 
+        SUM(valorfrete) as total_valor
+      FROM lancamentos
+      WHERE produto IS NOT NULL AND produto != '' AND valorfrete > 0
+      GROUP BY produto
+      ORDER BY total_valor DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar analytics (valor por produto):', err);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+});
+
 
 // Inicia o servidor
 setupDatabase().then(() => {
