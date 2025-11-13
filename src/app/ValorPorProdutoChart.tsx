@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/PesoPorProdutoChart.tsx
+// Arquivo: src/components/app/ValorPorProdutoChart.tsx
 
 "use client";
 
@@ -8,21 +8,21 @@ import { toast } from "sonner";
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
-type DadosPeso = {
-  motorista: string;
-  total_peso: number;
+type DadosValor = {
+  produto: string;
+  total_valor: number;
 };
 
-export function PesoPorProdutoChart() {
-  const [data, setData] = useState<DadosPeso[]>([]);
+export function ValorPorProdutoChart() {
+  const [data, setData] = useState<DadosValor[]>([]);
 
   useEffect(() => {
     async function carregarDados() {
       const token = localStorage.getItem('authToken');
-      if (!token) return; 
+      if (!token) return;
 
       try {
-        const response = await fetch(`${API_URL}/api/analytics/peso-por-motorista`, {
+        const response = await fetch(`${API_URL}/api/analytics/valor-por-produto`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -32,13 +32,13 @@ export function PesoPorProdutoChart() {
         
         const dadosApi = await response.json();
         const dadosFormatados = dadosApi.map((item: any) => ({
-          motorista: item.motorista,
-          total_peso: Number(item.total_peso)
+          produto: item.produto,
+          total_valor: Number(item.total_valor)
         }));
         setData(dadosFormatados);
 
       } catch (error) {
-        toast.error("Erro ao carregar dados do gráfico de motoristas.");
+        toast.error("Erro ao carregar dados do gráfico de produtos.");
         console.error(error);
       }
     }
@@ -50,11 +50,11 @@ export function PesoPorProdutoChart() {
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis 
-          dataKey="motorista" 
+          dataKey="produto" 
           stroke="#888888" 
           fontSize={12} 
           tickLine={false} 
-          axisLine={false} 
+          axisLine={false}
           interval={0} 
           angle={-30} 
           textAnchor="end" 
@@ -65,13 +65,16 @@ export function PesoPorProdutoChart() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `${value / 1000}t`}
+          tickFormatter={(value) => `R$ ${value / 1000}k`}
         />
         <Tooltip
           cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} kg`, 'Peso Total']}
+          formatter={(value: number) => [
+            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 
+            'Valor Total'
+          ]}
         />
-        <Bar dataKey="total_peso" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Peso Total" />
+        <Bar dataKey="total_valor" fill="#10b981" radius={[4, 4, 0, 0]} name="Valor Total" />
       </BarChart>
     </ResponsiveContainer>
   );

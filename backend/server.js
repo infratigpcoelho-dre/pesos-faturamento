@@ -17,7 +17,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
+// ATENÇÃO: Confirme que sua URL do Render está aqui
 const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 const db = new Client({
@@ -54,22 +54,9 @@ async function setupDatabase() {
     )
   `);
 
+  // ****** NOVA TABELA DE PRODUTOS ******
   await db.query(`
     CREATE TABLE IF NOT EXISTS produtos (
-      id SERIAL PRIMARY KEY,
-      nome TEXT UNIQUE NOT NULL
-    )
-  `);
-  
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS origens (
-      id SERIAL PRIMARY KEY,
-      nome TEXT UNIQUE NOT NULL
-    )
-  `);
-  
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS destinos (
       id SERIAL PRIMARY KEY,
       nome TEXT UNIQUE NOT NULL
     )

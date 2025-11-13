@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/PesoPorProdutoChart.tsx
+// Arquivo: src/components/app/PesoPorMotoristaChart.tsx (NOVO ARQUIVO)
 
 "use client";
 
@@ -6,20 +6,22 @@ import { useState, useEffect } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
+// Define o tipo de dados que esperamos da API
 type DadosPeso = {
   motorista: string;
   total_peso: number;
 };
 
-export function PesoPorProdutoChart() {
+export function PesoPorMotoristaChart() {
   const [data, setData] = useState<DadosPeso[]>([]);
 
   useEffect(() => {
     async function carregarDados() {
       const token = localStorage.getItem('authToken');
-      if (!token) return; 
+      if (!token) return; // Não faz nada se não estiver logado
 
       try {
         const response = await fetch(`${API_URL}/api/analytics/peso-por-motorista`, {
@@ -31,6 +33,7 @@ export function PesoPorProdutoChart() {
         }
         
         const dadosApi = await response.json();
+        // Converte o total_peso para número, pois o PostgreSQL pode retornar como string
         const dadosFormatados = dadosApi.map((item: any) => ({
           motorista: item.motorista,
           total_peso: Number(item.total_peso)
@@ -55,6 +58,7 @@ export function PesoPorProdutoChart() {
           fontSize={12} 
           tickLine={false} 
           axisLine={false} 
+          // Evita que os nomes se sobreponham
           interval={0} 
           angle={-30} 
           textAnchor="end" 
