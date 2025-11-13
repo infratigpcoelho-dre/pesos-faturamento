@@ -1,11 +1,12 @@
-// Arquivo: src/app/page.tsx (FINAL COM AUTENTICAÇÃO EM TODAS AS CHAMADAS)
+// Arquivo: src/app/page.tsx (FINAL COM BOTÃO DE ADMIN CONDICIONAL)
 
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, FileDown, LogOut, Link as LinkIcon } from "lucide-react";
+// ****** MUDANÇA 1: Importamos o ícone de 'Configurações' ******
+import { MoreHorizontal, Pencil, Trash2, PlusCircle, FileDown, LogOut, Link as LinkIcon, Settings } from "lucide-react"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -30,7 +31,6 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function Dashboard() {
@@ -39,9 +39,9 @@ export default function Dashboard() {
   const [lancamentoParaEditar, setLancamentoParaEditar] = useState<Lancamento | null>(null);
   const [filtros, setFiltros] = useState({ motorista: '', origem: '', produto: '' });
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [userRole, setUserRole] = useState<string | null>(null); // ****** MUDANÇA 2: Novo estado para o 'role' ******
   const router = useRouter();
 
-  // Função para pegar o token do localStorage
   const getToken = () => {
     if (typeof window !== "undefined") {
       return localStorage.getItem('authToken');
@@ -51,9 +51,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = getToken();
+    const role = localStorage.getItem('userRole'); // ****** MUDANÇA 3: Lemos o 'role' do localStorage ******
+    
     if (!token) {
       router.push('/login');
     } else {
+      setUserRole(role); // ****** MUDANÇA 4: Salvamos o 'role' no estado ******
       carregarLancamentos();
     }
   }, [router]);
@@ -61,15 +64,12 @@ export default function Dashboard() {
   async function carregarLancamentos() {
     try {
       const token = getToken();
-      // ****** CORREÇÃO AQUI: Adicionamos o 'headers' com o token ******
       const response = await fetch(`${API_URL}/lancamentos`, {
-        headers: { 'Authorization': `Bearer ${token}` } 
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      // ****** FIM DA CORREÇÃO ******
-
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
-        handleLogout(false); // Chama o logout sem o toast de sucesso
+        handleLogout(false);
         return;
       }
       if (!response.ok) throw new Error('Falha ao buscar dados da API');
@@ -101,7 +101,7 @@ export default function Dashboard() {
       const response = await fetch(url, { 
         method: method, 
         body: formData,
-        headers: { 'Authorization': `Bearer ${token}` } // O crachá já estava aqui
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.status === 401 || response.status === 403) {
@@ -130,7 +130,7 @@ export default function Dashboard() {
     try {
       const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` } // O crachá já estava aqui
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.status === 401 || response.status === 403) {
         toast.error("Sua sessão expirou. Faça login novamente.");
@@ -234,6 +234,17 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard de Pesagem</h1>
         <div className="flex items-center gap-2">
+          
+          {/* ****** MUDANÇA 5: O BOTÃO DE ADMIN CONDICIONAL ****** */}
+          {userRole === 'master' && (
+            <Button asChild variant="secondary">
+              <Link href="/admin">
+                <Settings className="mr-2 h-4 w-4" /> Painel Master
+              </Link>
+            </Button>
+          )}
+          {/* ****** FIM DA MUDANÇA ****** */}
+
           <Button onClick={handleAbrirDialogParaCriar}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Lançamento</Button>
           <Button variant="outline" size="icon" onClick={() => handleLogout(true)} title="Sair do sistema">
             <LogOut className="h-4 w-4" />
