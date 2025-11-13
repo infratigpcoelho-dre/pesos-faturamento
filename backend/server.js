@@ -152,28 +152,29 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rowCount === 0) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+    
     const user = result.rows[0];
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
     
-    // ATUALIZADO: Token agora inclui o 'nome_completo'
     const token = jwt.sign(
       { 
         id: user.id, 
         username: user.username, 
         role: user.role,
-        nome_completo: user.nome_completo // Adicionamos o nome
+        nome_completo: user.nome_completo 
       }, 
       JWT_SECRET, 
       { expiresIn: '8h' }
     );
     
-    // ATUALIZADO: Devolve o 'role' E o 'nome_completo' para o frontend
+    // MUDANÇA AQUI: Adicionamos 'placa_cavalo' na resposta
     res.json({ 
       message: 'Login bem-sucedido!', 
       token, 
       role: user.role, 
-      nome_completo: user.nome_completo 
+      nome_completo: user.nome_completo,
+      placa_cavalo: user.placa_cavalo // <--- NOVO CAMPO
     });
   } catch (err) {
     console.error('Erro no login:', err);
