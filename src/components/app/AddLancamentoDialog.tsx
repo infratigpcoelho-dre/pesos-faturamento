@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORREÇÃO DE TRAVAMENTO INTELIGENTE)
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORREÇÃO FINAL DO 'void')
 
 "use client";
 
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 type FormData = { [key: string]: string | number; };
 type InitialData = {
@@ -31,22 +32,33 @@ type LancamentoDialogProps = {
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
-const formatarParaDateTimeLocal = (dataString: string | number | null | undefined) => {
-  if (!dataString) return "";
+// ****** AQUI ESTÁ A CORREÇÃO DO ERRO 'void' ******
+// Função para formatar a data para o input datetime-local
+const formatarParaDateTimeLocal = (dataString: string | number | null | undefined): string => {
+  if (!dataString) return ""; // Sempre retorna uma string
   try {
     const data = new Date(dataString);
+    if (isNaN(data.getTime())) return ""; // Verifica se a data é inválida
+    
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
-  } catch (e) { return ""; }
+  } catch (e) {
+    return ""; // Sempre retorna uma string
+  }
 }
 
-const formatarParaDate = (dataString: string | number | null | undefined) => {
-  if (!dataString) return "";
+// Função para formatar a data para o input date
+const formatarParaDate = (dataString: string | number | null | undefined): string => {
+  if (!dataString) return ""; // Sempre retorna uma string
   try {
     const data = new Date(dataString);
+    if (isNaN(data.getTime())) return ""; // Verifica se a data é inválida
     return data.toISOString().split('T')[0];
-  } catch (e) { return ""; }
+  } catch (e) {
+    return ""; // Sempre retorna uma string
+  }
 }
+// ****** FIM DA CORREÇÃO ******
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData, userRole, userName, userPlaca }: LancamentoDialogProps) {
   
@@ -54,12 +66,8 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
     data: new Date().toISOString().split('T')[0], horapostada: new Date().toTimeString().split(' ')[0].substring(0, 5),
     origem: "", destino: "", iniciodescarga: "", terminodescarga: "", tempodescarga: "",
     ticket: "", pesoreal: "", tarifa: "", nf: "", 
-    
-    // Lógica inteligente de preenchimento:
-    // Se tiver placa no cadastro, usa ela. Senão, vazio.
     cavalo: userRole !== 'master' && userPlaca ? userPlaca : "", 
     motorista: userRole === 'master' ? "" : (userName || ""), 
-    
     valorfrete: "", obs: "", produto: ""
   });
 
@@ -92,15 +100,15 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
           const valor = initialData[key as keyof typeof initialData];
           dadosCorrigidos[key] = valor ?? ""; 
         });
+        
+        // Agora essas funções SEMPRE retornarão uma string
         dadosCorrigidos.data = formatarParaDate(initialData.data);
         dadosCorrigidos.horapostada = initialData.horapostada ?? "";
         dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
         dadosCorrigidos.terminodescarga = formatarParaDateTimeLocal(initialData.terminodescarga);
         
-        // Mantém a lógica de travamento na edição também
         if (userRole !== 'master') {
           dadosCorrigidos.motorista = userName || "";
-          // Só sobrescreve se tiver placa cadastrada
           if (userPlaca) dadosCorrigidos.cavalo = userPlaca;
         }
 
@@ -112,9 +120,25 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
     }
   }, [initialData, isOpen, userName, userRole, userPlaca]);
 
+  useEffect(() => {
+    const inicio = String(formData.iniciodescarga);
+    const fim = String(formData.terminodescarga);
+
+    if (inicio && fim) {
+      const tempo = calcularTempoDescarga(inicio, fim);
+      if (tempo !== formData.tempodescarga) {
+        setFormData(prevState => ({
+          ...prevState,
+          tempodescarga: tempo
+        }));
+      }
+    }
+  }, [formData.iniciodescarga, formData.terminodescarga]);
+
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prevState => ({ ...prevState, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,6 +147,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
   };
 
   const handleSubmit = () => { onSave(formData, arquivoNf); };
+
   const isEditing = !!initialData;
   const currentFileName = initialData?.caminhonf;
   const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -136,31 +161,28 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+          {/* Coluna 1 */}
           <div className="space-y-4">
             <div><Label>Data</Label><Input name="data" type="date" value={String(formData.data)} onChange={handleChange} /></div>
             <div><Label>Hora Postada</Label><Input name="horapostada" type="time" value={String(formData.horapostada)} onChange={handleChange} /></div>
-            
             <div>
               <Label>Motorista</Label>
               <Input name="motorista" value={String(formData.motorista)} onChange={handleChange} disabled={userRole !== 'master'} readOnly={userRole !== 'master'} />
             </div>
-            
-            {/* MUDANÇA: SÓ TRAVA SE TIVER UMA PLACA CADASTRADA! */}
             <div>
               <Label>Cavalo (Placa)</Label>
               <Input 
                 name="cavalo" 
                 value={String(formData.cavalo)} 
                 onChange={handleChange} 
-                // Se não for master E tiver placa, trava. Se não tiver placa, libera para digitar.
                 disabled={userRole !== 'master' && !!userPlaca} 
                 readOnly={userRole !== 'master' && !!userPlaca}
               />
             </div>
-
             <div><Label>Ticket</Label><Input name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
           </div>
 
+          {/* Coluna 2 */}
           <div className="space-y-4">
             <div><Label>Produto</Label><select name="produto" value={String(formData.produto)} onChange={handleChange} className={inputClass}><option value="">Selecione...</option>{listaProdutos.map(i => <option key={i.id} value={i.nome}>{i.nome}</option>)}</select></div>
             <div><Label>Origem</Label><select name="origem" value={String(formData.origem)} onChange={handleChange} className={inputClass}><option value="">Selecione...</option>{listaOrigens.map(i => <option key={i.id} value={i.nome}>{i.nome}</option>)}</select></div>
@@ -169,10 +191,22 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
             <div><Label>Nota Fiscal (Nº)</Label><Input name="nf" value={String(formData.nf)} onChange={handleChange} /></div>
           </div>
 
+          {/* Coluna 3 */}
           <div className="space-y-4">
             <div><Label>Início Descarga</Label><Input name="iniciodescarga" type="datetime-local" value={String(formData.iniciodescarga)} onChange={handleChange} /></div>
             <div><Label>Término Descarga</Label><Input name="terminodescarga" type="datetime-local" value={String(formData.terminodescarga)} onChange={handleChange} /></div>
-            <div><Label>Tempo Descarga</Label><Input name="tempodescarga" value={String(formData.tempodescarga)} onChange={handleChange} placeholder="ex: 1h 30m"/></div>
+            <div>
+              <Label htmlFor="tempodescarga">Tempo Descarga</Label>
+              <Input 
+                id="tempodescarga" 
+                name="tempodescarga" 
+                value={String(formData.tempodescarga)} 
+                onChange={handleChange} 
+                placeholder="Cálculo automático..."
+                readOnly
+                className="disabled:opacity-100"
+              />
+            </div>
             <div><Label>Tarifa</Label><Input name="tarifa" type="number" step="0.01" value={String(formData.tarifa)} onChange={handleChange} /></div>
             <div><Label>Valor Frete</Label><Input name="valorfrete" type="number" step="0.01" value={String(formData.valorfrete)} onChange={handleChange} /></div>
             <div><Label>Observação</Label><Input name="obs" value={String(formData.obs)} onChange={handleChange} /></div>
@@ -181,10 +215,27 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
         <div className="space-y-2">
           <Label>Anexar Nota Fiscal (PDF/Imagem)</Label>
           {isEditing && currentFileName && (<p className="text-sm text-muted-foreground">Atual: {currentFileName}</p>)}
-          <Input type="file" onChange={handleFileChange} />
+          <Input name="arquivoNf" type="file" onChange={handleFileChange} />
         </div>
         <DialogFooter><Button type="submit" onClick={handleSubmit}>Salvar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+// (Não esqueça da função 'calcularTempoDescarga' que já tínhamos)
+function calcularTempoDescarga(inicio: string, fim: string): string {
+  if (!inicio || !fim) return "";
+  try {
+    const dataInicio = new Date(inicio);
+    const dataFim = new Date(fim);
+    if (dataFim <= dataInicio) return ""; 
+    let diffMs = dataFim.getTime() - dataInicio.getTime();
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    diffMs -= diffHoras * (1000 * 60 * 60);
+    const diffMinutos = Math.floor(diffMs / (1000 * 60));
+    return `${diffHoras}h ${diffMinutos}m`;
+  } catch (e) {
+    return "";
+  }
 }
