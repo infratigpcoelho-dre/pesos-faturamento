@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/ValorPorProdutoChart.tsx
+// Arquivo: src/components/app/ValorPorProdutoChart.tsx (ARQUIVO NOVO)
 
 "use client";
 
@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 
+// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 type DadosValor = {

@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE PRODUTOS)
+// Arquivo: backend/server.js (VERSÃO FINAL COM URL CORRETA E ANALYTICS)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -15,10 +15,11 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
+const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5'; // Lembre-se de trocar pela sua chave
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui
-const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
+// ****** AQUI ESTÁ A CORREÇÃO CRÍTICA ******
+// Esta é a URL CORRETA do seu banco de dados PostgreSQL no Render
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -36,33 +37,14 @@ const upload = multer({ storage: storage });
 async function setupDatabase() {
   await db.connect(); 
   
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS lancamentos (
-      id SERIAL PRIMARY KEY, data TEXT, horapostada TEXT, origem TEXT,
-      destino TEXT, iniciodescarga TEXT, terminodescarga TEXT, tempodescarga TEXT,
-      ticket TEXT, pesoreal REAL, tarifa REAL, nf TEXT, cavalo TEXT,
-      motorista TEXT, valorfrete REAL, obs TEXT, produto TEXT,
-      caminhonf TEXT
-    )
-  `);
+  // Criação de todas as tabelas (lancamentos, users, produtos, origens, destinos)
+  await db.query(`CREATE TABLE IF NOT EXISTS lancamentos (id SERIAL PRIMARY KEY, data TEXT, horapostada TEXT, origem TEXT, destino TEXT, iniciodescarga TEXT, terminodescarga TEXT, tempodescarga TEXT, ticket TEXT, pesoreal REAL, tarifa REAL, nf TEXT, cavalo TEXT, motorista TEXT, valorfrete REAL, obs TEXT, produto TEXT, caminhonf TEXT)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS produtos (id SERIAL PRIMARY KEY, nome TEXT UNIQUE NOT NULL)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS origens (id SERIAL PRIMARY KEY, nome TEXT UNIQUE NOT NULL)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS destinos (id SERIAL PRIMARY KEY, nome TEXT UNIQUE NOT NULL)`);
 
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
-    )
-  `);
-
-  // ****** NOVA TABELA DE PRODUTOS ******
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS produtos (
-      id SERIAL PRIMARY KEY,
-      nome TEXT UNIQUE NOT NULL
-    )
-  `);
-  
-  // --- MIGRAÇÃO AUTOMÁTICA (Garante que as colunas existem) ---
+  // --- Migrações (sem mudanças) ---
   try {
     await db.query(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'motorista'`);
     console.log("MIGRAÇÃO: Coluna 'role' adicionada.");
@@ -70,7 +52,6 @@ async function setupDatabase() {
     if (err.code === '42701') console.log("MIGRAÇÃO: Coluna 'role' já existe.");
     else if (err.code !== 'ENOTFOUND') throw err;
   }
-  
   try {
     await db.query(`ALTER TABLE users ADD COLUMN nome_completo TEXT`);
     await db.query(`ALTER TABLE users ADD COLUMN cpf TEXT`);
@@ -84,7 +65,7 @@ async function setupDatabase() {
   }
 }
 
-// --- Middlewares de Segurança (sem mudanças) ---
+// --- Middlewares de Segurança ---
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; 
@@ -95,7 +76,6 @@ function authenticateToken(req, res, next) {
     next(); 
   });
 }
-
 function authenticateMaster(req, res, next) {
   if (req.user.role !== 'master') {
     return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master.' });
@@ -117,7 +97,6 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 app.post('/register-master', async (req, res) => {
   try {
     const { username, password, nome_completo } = req.body;
@@ -134,7 +113,6 @@ app.post('/register-master', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 app.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -439,10 +417,7 @@ app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (re
   } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
 });
 
-
 // ****** NOVAS ROTAS DE ANALYTICS (PAINEL MASTER) ******
-
-// GET: Soma de peso (pesoreal) agrupado por motorista
 app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const result = await db.query(`
@@ -460,8 +435,6 @@ app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMast
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
-// GET: Soma de valor (valorfrete) agrupado por produto
 app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const result = await db.query(`
@@ -483,7 +456,7 @@ app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateMaste
 
 // Inicia o servidor
 setupDatabase().then(() => {
-  app.listen(PORT, () => console.log(`✅ Servidor backend rodando na porta ${PORT}`));
+  app.listen(PORT, () => console.log(`✅ Servidor backend rodando na porta ${PORT}`)); // Usa a variável PORT dinâmica
 }).catch(err => {
   console.error('❌ Falha ao iniciar o banco de dados:', err);
   if (db) db.end();
