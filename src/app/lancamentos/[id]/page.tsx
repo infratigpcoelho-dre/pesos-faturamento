@@ -1,4 +1,4 @@
-// Arquivo: src/app/lancamentos/[id]/page.tsx (FINAL COM AUTENTICAÇÃO)
+// Arquivo: src/app/lancamentos/[id]/page.tsx (COMPLETO E CORRIGIDO PARA 'Ton')
 
 "use client";
 
@@ -21,11 +21,14 @@ type Lancamento = {
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
+// Componente helper para exibir cada item com ícone
 function DetalheItem({ icon: Icon, label, value, isCurrency = false }: { icon: React.ElementType, label: string, value: string | number | null, isCurrency?: boolean }) {
   let displayValue = value ?? '-';
+  
   if (isCurrency) {
     displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
   }
+  
   return (
     <div className="flex items-start space-x-3">
       <Icon className="h-5 w-5 text-muted-foreground mt-1" />
@@ -52,12 +55,9 @@ export default function LancamentoDetalhePage() {
 
     async function carregarDetalhes() {
       try {
-        // ****** CORREÇÃO AQUI: Adicionamos o 'headers' com o token ******
         const response = await fetch(`${API_URL}/lancamentos/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` } 
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        // ****** FIM DA CORREÇÃO ******
-
         if (response.status === 401 || response.status === 403) {
           toast.error("Sua sessão expirou. Faça login novamente.");
           router.push('/login');
@@ -80,7 +80,8 @@ export default function LancamentoDetalhePage() {
     if (!dataString) return '-';
     try {
       if (dataString.includes('T')) {
-         return new Date(dataString).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+         const data = new Date(dataString);
+         return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
       return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
     } catch (e: unknown) {
@@ -131,7 +132,11 @@ export default function LancamentoDetalhePage() {
         <CardHeader><CardTitle>Financeiro e Documentos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetalheItem icon={FileText} label="Nº da Nota Fiscal" value={lancamento.nf} />
-          <DetalheItem icon={DollarSign} label="Peso Real" value={`${(lancamento.pesoreal || 0).toLocaleString('pt-BR')} kg`} />
+          
+          {/* ****** MUDANÇA AQUI ****** */}
+          <DetalheItem icon={DollarSign} label="Peso Real (Ton)" value={`${(lancamento.pesoreal || 0).toLocaleString('pt-BR')} t`} />
+          {/* ****** FIM DA MUDANÇA ****** */}
+
           <DetalheItem icon={DollarSign} label="Tarifa" value={lancamento.tarifa} isCurrency={true} />
           <DetalheItem icon={DollarSign} label="Valor Frete" value={lancamento.valorfrete} isCurrency={true} />
           <DetalheItem icon={MessageSquare} label="Observação" value={lancamento.obs} />

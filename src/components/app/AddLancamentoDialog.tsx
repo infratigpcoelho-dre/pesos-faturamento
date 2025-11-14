@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/AddLancamentoDialog.tsx (CORREÇÃO FINAL DO 'void')
+// Arquivo: src/components/app/AddLancamentoDialog.tsx (COMPLETO E CORRIGIDO PARA 'Ton')
 
 "use client";
 
@@ -32,33 +32,24 @@ type LancamentoDialogProps = {
 
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
-// ****** AQUI ESTÁ A CORREÇÃO DO ERRO 'void' ******
-// Função para formatar a data para o input datetime-local
 const formatarParaDateTimeLocal = (dataString: string | number | null | undefined): string => {
-  if (!dataString) return ""; // Sempre retorna uma string
+  if (!dataString) return "";
   try {
     const data = new Date(dataString);
-    if (isNaN(data.getTime())) return ""; // Verifica se a data é inválida
-    
+    if (isNaN(data.getTime())) return "";
     const dataLocal = new Date(data.getTime() - (data.getTimezoneOffset() * 60000));
     return dataLocal.toISOString().slice(0, 16);
-  } catch (e) {
-    return ""; // Sempre retorna uma string
-  }
+  } catch (e) { return ""; }
 }
 
-// Função para formatar a data para o input date
 const formatarParaDate = (dataString: string | number | null | undefined): string => {
-  if (!dataString) return ""; // Sempre retorna uma string
+  if (!dataString) return "";
   try {
     const data = new Date(dataString);
-    if (isNaN(data.getTime())) return ""; // Verifica se a data é inválida
+    if (isNaN(data.getTime())) return "";
     return data.toISOString().split('T')[0];
-  } catch (e) {
-    return ""; // Sempre retorna uma string
-  }
+  } catch (e) { return ""; }
 }
-// ****** FIM DA CORREÇÃO ******
 
 export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData, userRole, userName, userPlaca }: LancamentoDialogProps) {
   
@@ -100,8 +91,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
           const valor = initialData[key as keyof typeof initialData];
           dadosCorrigidos[key] = valor ?? ""; 
         });
-        
-        // Agora essas funções SEMPRE retornarão uma string
         dadosCorrigidos.data = formatarParaDate(initialData.data);
         dadosCorrigidos.horapostada = initialData.horapostada ?? "";
         dadosCorrigidos.iniciodescarga = formatarParaDateTimeLocal(initialData.iniciodescarga);
@@ -111,7 +100,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
           dadosCorrigidos.motorista = userName || "";
           if (userPlaca) dadosCorrigidos.cavalo = userPlaca;
         }
-
         setFormData(dadosCorrigidos);
       } else {
         setFormData(getInitialState());
@@ -171,13 +159,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
             </div>
             <div>
               <Label>Cavalo (Placa)</Label>
-              <Input 
-                name="cavalo" 
-                value={String(formData.cavalo)} 
-                onChange={handleChange} 
-                disabled={userRole !== 'master' && !!userPlaca} 
-                readOnly={userRole !== 'master' && !!userPlaca}
-              />
+              <Input name="cavalo" value={String(formData.cavalo)} onChange={handleChange} disabled={userRole !== 'master' && !!userPlaca} readOnly={userRole !== 'master' && !!userPlaca} />
             </div>
             <div><Label>Ticket</Label><Input name="ticket" value={String(formData.ticket)} onChange={handleChange} /></div>
           </div>
@@ -187,7 +169,11 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
             <div><Label>Produto</Label><select name="produto" value={String(formData.produto)} onChange={handleChange} className={inputClass}><option value="">Selecione...</option>{listaProdutos.map(i => <option key={i.id} value={i.nome}>{i.nome}</option>)}</select></div>
             <div><Label>Origem</Label><select name="origem" value={String(formData.origem)} onChange={handleChange} className={inputClass}><option value="">Selecione...</option>{listaOrigens.map(i => <option key={i.id} value={i.nome}>{i.nome}</option>)}</select></div>
             <div><Label>Destino</Label><select name="destino" value={String(formData.destino)} onChange={handleChange} className={inputClass}><option value="">Selecione...</option>{listaDestinos.map(i => <option key={i.id} value={i.nome}>{i.nome}</option>)}</select></div>
-            <div><Label>Peso Real (kg)</Label><Input name="pesoreal" type="number" value={String(formData.pesoreal)} onChange={handleChange} /></div>
+            
+            {/* ****** MUDANÇA AQUI ****** */}
+            <div><Label>Peso Real (Ton)</Label><Input name="pesoreal" type="number" step="0.01" value={String(formData.pesoreal)} onChange={handleChange} /></div>
+            {/* ****** FIM DA MUDANÇA ****** */}
+
             <div><Label>Nota Fiscal (Nº)</Label><Input name="nf" value={String(formData.nf)} onChange={handleChange} /></div>
           </div>
 
@@ -197,15 +183,7 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
             <div><Label>Término Descarga</Label><Input name="terminodescarga" type="datetime-local" value={String(formData.terminodescarga)} onChange={handleChange} /></div>
             <div>
               <Label htmlFor="tempodescarga">Tempo Descarga</Label>
-              <Input 
-                id="tempodescarga" 
-                name="tempodescarga" 
-                value={String(formData.tempodescarga)} 
-                onChange={handleChange} 
-                placeholder="Cálculo automático..."
-                readOnly
-                className="disabled:opacity-100"
-              />
+              <Input id="tempodescarga" name="tempodescarga" value={String(formData.tempodescarga)} onChange={handleChange} placeholder="Cálculo automático..." readOnly className="disabled:opacity-100" />
             </div>
             <div><Label>Tarifa</Label><Input name="tarifa" type="number" step="0.01" value={String(formData.tarifa)} onChange={handleChange} /></div>
             <div><Label>Valor Frete</Label><Input name="valorfrete" type="number" step="0.01" value={String(formData.valorfrete)} onChange={handleChange} /></div>
@@ -223,7 +201,6 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
   );
 }
 
-// (Não esqueça da função 'calcularTempoDescarga' que já tínhamos)
 function calcularTempoDescarga(inicio: string, fim: string): string {
   if (!inicio || !fim) return "";
   try {

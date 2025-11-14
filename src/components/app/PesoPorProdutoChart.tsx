@@ -1,56 +1,42 @@
-// Arquivo: src/components/app/PesoPorProdutoChart.tsx
+// Arquivo: src/components/app/PesoPorProdutoChart.tsx (COMPLETO E CORRIGIDO PARA 'Ton')
 
 "use client";
 
-import { useState, useEffect } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { toast } from "sonner";
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
-
-type DadosPeso = {
-  motorista: string;
-  total_peso: number;
+type Lancamento = {
+  produto: string;
+  pesoreal: number; // USA O NOME MINÚSCULO DO BANCO
 };
 
-export function PesoPorProdutoChart() {
-  const [data, setData] = useState<DadosPeso[]>([]);
+type PesoPorProdutoChartProps = {
+  data: Lancamento[];
+};
 
-  useEffect(() => {
-    async function carregarDados() {
-      const token = localStorage.getItem('authToken');
-      if (!token) return; 
+export function PesoPorProdutoChart({ data }: PesoPorProdutoChartProps) {
+  const dadosProcessados = data.reduce((acc, lancamento) => {
+    const produto = lancamento.produto || "Não especificado";
+    const peso = Number(lancamento.pesoreal) || 0; // O peso já está em Toneladas
+    
+    const produtoExistente = acc.find(item => item.produto === produto);
 
-      try {
-        const response = await fetch(`${API_URL}/api/analytics/peso-por-motorista`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Falha ao buscar dados do gráfico');
-        }
-        
-        const dadosApi = await response.json();
-        const dadosFormatados = dadosApi.map((item: any) => ({
-          motorista: item.motorista,
-          total_peso: Number(item.total_peso)
-        }));
-        setData(dadosFormatados);
-
-      } catch (error) {
-        toast.error("Erro ao carregar dados do gráfico de motoristas.");
-        console.error(error);
-      }
+    if (produtoExistente) {
+      produtoExistente.pesoTotal += peso;
+    } else {
+      acc.push({
+        produto: produto,
+        pesoTotal: peso,
+      });
     }
-    carregarDados();
-  }, []);
+    return acc;
+  }, [] as { produto: string; pesoTotal: number }[]);
 
   return (
     <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={data}>
+      <BarChart data={dadosProcessados}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis 
-          dataKey="motorista" 
+          dataKey="produto" 
           stroke="#888888" 
           fontSize={12} 
           tickLine={false} 
@@ -65,13 +51,15 @@ export function PesoPorProdutoChart() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `${value / 1000}t`}
+          // ****** MUDANÇA AQUI (removemos / 1000) ******
+          tickFormatter={(value) => `${value} t`} 
         />
         <Tooltip
           cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} kg`, 'Peso Total']}
+          // ****** MUDANÇA AQUI (removemos / 1000) ******
+          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} t`, 'Peso Total']}
         />
-        <Bar dataKey="total_peso" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Peso Total" />
+        <Bar dataKey="pesoTotal" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Peso Total" />
       </BarChart>
     </ResponsiveContainer>
   );
