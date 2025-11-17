@@ -74,8 +74,15 @@ export function AddLancamentoDialog({ isOpen, onOpenChange, onSave, initialData,
       const fetchDados = async (endpoint: string, setEstado: (dados: Opcao[]) => void) => {
         try {
           const res = await fetch(`${API_URL}/api/${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
-          if (res.ok) { const data = await res.json(); setEstado(data); }
-        } catch (error) { console.error(`Erro ${endpoint}`); }
+          if (res.ok) { 
+            const data = await res.json(); 
+            setEstado(data); 
+          } else {
+            console.error(`Erro ${endpoint}: Status ${res.status} - ${res.statusText}`);
+          }
+        } catch (error) { 
+          console.error(`Erro ${endpoint}:`, error); 
+        }
       };
       fetchDados('produtos', setListaProdutos);
       fetchDados('origens', setListaOrigens);
