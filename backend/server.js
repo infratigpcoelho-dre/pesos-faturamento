@@ -15,10 +15,10 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
+const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
 // ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
-const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
+const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; // <--- VERIFIQUE SE ESTA É A URL DO SEU BANCO!
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -173,16 +173,22 @@ app.post('/login', async (req, res) => {
 });
 
 // --- ROTAS DE LANÇAMENTOS (PROTEGIDAS E FILTRADAS) ---
+// ****** MUDANÇA 1: GET Todos os Lançamentos ******
 app.get('/lancamentos', authenticateToken, async (req, res) => { 
   try {
-    const { role, nome_completo } = req.user;
+    const { role, nome_completo } = req.user; // Pega o usuário do token
+    
     let query = 'SELECT * FROM lancamentos';
     let params = [];
+
     if (role !== 'master') {
+      // Se não for master, filtra pelo nome do motorista
       query += ' WHERE motorista = $1';
       params.push(nome_completo);
     }
+    
     query += ' ORDER BY id DESC';
+    
     const result = await db.query(query, params); 
     res.json(result.rows); 
   } catch(e){ 
@@ -190,18 +196,24 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
   } 
 });
 
+// ****** MUDANÇA 2: GET Lançamento por ID ******
 app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { role, nome_completo } = req.user;
+    
     let query = 'SELECT * FROM lancamentos WHERE id = $1';
     let params = [id];
+
     if (role !== 'master') {
+      // Se não for master, só pode ver se o ID for dele
       query += ' AND motorista = $2';
       params.push(nome_completo);
     }
+    
     const result = await db.query(query, params);
     if (result.rowCount === 0) {
+      // Se não encontrou (ou não tem permissão), retorna 404
       return res.status(404).json({ error: 'Lançamento não encontrado' });
     }
     res.json(result.rows[0]);
@@ -211,6 +223,7 @@ app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Rota POST (Sem mudança na lógica, pois o motorista já se auto-insere)
 app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   try { 
     const dados = req.body;
@@ -229,6 +242,7 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
   } catch(e){ console.error("Erro no POST:", e); res.status(500).json({error: e.message}) } 
 });
 
+// ****** MUDANÇA 3: PUT (Editar) Lançamento ******
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   try { 
     const { id } = req.params;
@@ -239,8 +253,9 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     if (lancamentoAtualResult.rowCount === 0) return res.status(404).json({e:'Não encontrado'});
     const lancamentoAtual = lancamentoAtualResult.rows[0];
 
+    // Se não for master, E o lançamento não pertencer a ele, bloqueia
     if (role !== 'master' && lancamentoAtual.motorista !== nome_completo) {
-      return res.status(403).json({ error: 'Acesso negado.' });
+      return res.status(403).json({ error: 'Acesso negado. Você não pode editar este lançamento.' });
     }
 
     let caminhoNf = lancamentoAtual.caminhonf; 
@@ -267,6 +282,7 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
+// ****** MUDANÇA 4: DELETE (Excluir) Lançamento ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
@@ -484,7 +500,7 @@ app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (re
   } catch (err) { res.status(500).json({ error: 'Erro interno do servidor.' }); }
 });
 
-// ****** NOVAS ROTAS DE ANALYTICS (PAINEL MASTER) ******
+// --- ROTAS DE ANALYTICS ---
 app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const result = await db.query(`
@@ -519,6 +535,7 @@ app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateMaste
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
 
 // Inicia o servidor
 setupDatabase().then(() => {
