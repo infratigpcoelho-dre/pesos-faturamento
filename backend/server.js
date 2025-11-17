@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM MIGRAÇÃO DE MOTORISTAS CORRIGIDA)
+// Arquivo: backend/server.js (VERSÃO FINAL COM URL CORRETA E ANALYTICS)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -17,7 +17,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
+// ****** AQUI ESTÁ A CORREÇÃO CRÍTICA ******
+// Cole a URL do seu banco de dados PostgreSQL do Render aqui
+// (Deve ser a "External URL" ou "Internal URL" que começa com "postgres://")
 const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
@@ -84,8 +86,6 @@ async function setupDatabase() {
     else if (err.code !== 'ENOTFOUND') throw err;
   }
   
-  // ****** AQUI ESTAVA O ERRO QUE CORRIGIMOS ******
-  // Esta lógica de migração estava em falta no último ficheiro
   try {
     await db.query(`ALTER TABLE users ADD COLUMN nome_completo TEXT`);
     await db.query(`ALTER TABLE users ADD COLUMN cpf TEXT`);
@@ -97,7 +97,6 @@ async function setupDatabase() {
     if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
     else if (err.code !== 'ENOTFOUND') throw err;
   }
-  // ****** FIM DA CORREÇÃO ******
 }
 
 // --- Middlewares de Segurança ---
@@ -523,7 +522,6 @@ app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateAnaly
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-
 
 // Inicia o servidor
 setupDatabase().then(() => {
