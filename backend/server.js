@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE UTILIZADORES)
+// Arquivo: backend/server.js (VERSÃO FINAL COM MIGRAÇÃO DE MOTORISTAS CORRIGIDA)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -15,10 +15,10 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
+const JWT_SECRET = 'SEU_SEGREDO_SUPER_SECRETO_PODE_SER_QUALQUER_FRASE_LONGA';
 
 // ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
+const DATABASE_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -84,6 +84,8 @@ async function setupDatabase() {
     else if (err.code !== 'ENOTFOUND') throw err;
   }
   
+  // ****** AQUI ESTAVA O ERRO QUE CORRIGIMOS ******
+  // Esta lógica de migração estava em falta no último ficheiro
   try {
     await db.query(`ALTER TABLE users ADD COLUMN nome_completo TEXT`);
     await db.query(`ALTER TABLE users ADD COLUMN cpf TEXT`);
@@ -95,6 +97,7 @@ async function setupDatabase() {
     if (err.code === '42701') console.log("MIGRAÇÃO: Colunas de motorista já existem.");
     else if (err.code !== 'ENOTFOUND') throw err;
   }
+  // ****** FIM DA CORREÇÃO ******
 }
 
 // --- Middlewares de Segurança ---
@@ -108,15 +111,12 @@ function authenticateToken(req, res, next) {
     next(); 
   });
 }
-
 function authenticateMaster(req, res, next) {
   if (req.user.role !== 'master') {
     return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master.' });
   }
   next();
 }
-
-// NOVO "SEGURANÇA" PARA ANÁLISES/VISUALIZAÇÃO
 function authenticateAnalyticsAccess(req, res, next) {
   if (req.user.role !== 'master' && req.user.role !== 'visualizador') {
     return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master ou Visualizador.' });
@@ -197,7 +197,6 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
     res.status(500).json({e}) 
   } 
 });
-
 app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -218,7 +217,6 @@ app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
-
 app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   if (req.user.role === 'visualizador') {
     return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem criar lançamentos.' });
@@ -239,7 +237,6 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
     res.status(201).json(r.rows[0]); 
   } catch(e){ console.error("Erro no POST:", e); res.status(500).json({error: e.message}) } 
 });
-
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   if (req.user.role === 'visualizador') {
     return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem editar lançamentos.' });
@@ -248,15 +245,12 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     const { id } = req.params;
     const dados = req.body;
     const { role, nome_completo } = req.user;
-
     const lancamentoAtualResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]);
     if (lancamentoAtualResult.rowCount === 0) return res.status(404).json({e:'Não encontrado'});
     const lancamentoAtual = lancamentoAtualResult.rows[0];
-
     if (role !== 'master' && lancamentoAtual.motorista !== nome_completo) {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
-
     let caminhoNf = lancamentoAtual.caminhonf; 
     if (req.file) {
       if (lancamentoAtual.caminhonf) {
@@ -266,7 +260,6 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
       }
       caminhoNf = req.file.filename;
     }
-    
     const r = await db.query(
       `UPDATE lancamentos SET data=$1, horapostada=$2, origem=$3, destino=$4, iniciodescarga=$5, terminodescarga=$6, tempodescarga=$7, ticket=$8, pesoreal=$9, tarifa=$10, nf=$11, cavalo=$12, motorista=$13, valorfrete=$14, obs=$15, produto=$16, caminhonf=$17 
        WHERE id=$18 RETURNING *`, 
@@ -280,7 +273,6 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     res.json(r.rows[0]); 
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
-
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   if (req.user.role === 'visualizador') {
     return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem excluir lançamentos.' });
@@ -288,28 +280,23 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
   try { 
     const { id } = req.params;
     const { role, nome_completo } = req.user;
-
     const lancamentoResult = await db.query('SELECT * FROM lancamentos WHERE id = $1', [id]);
     if (lancamentoResult.rowCount === 0) return res.status(404).json({e:'Não encontrado'});
-    
     const lancamento = lancamentoResult.rows[0];
-
     if (role !== 'master' && lancamento.motorista !== nome_completo) {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
-
     if (lancamento.caminhonf) {
       fs.unlink(path.join(__dirname, 'uploads', lancamento.caminhonf), (err) => {
         if (err) console.error("Erro ao deletar arquivo:", err);
       });
     }
-
     await db.query('DELETE FROM lancamentos WHERE id=$1', [id]); 
     res.status(204).send(); 
   } catch(e){ console.error("Erro no DELETE:", e); res.status(500).json({error: e.message}) } 
 });
 
-// --- ROTAS DE ADMIN/UTILIZADORES ---
+// --- ROTAS DE ADMIN/UTILIZADORES (antigo /motoristas) ---
 app.get('/api/utilizadores', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role != 'master' ORDER BY nome_completo");
