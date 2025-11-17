@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/PesoPorMotoristaChart.tsx
+// Arquivo: src/components/app/PesoPorMotoristaChart.tsx (CORRIGIDO)
 
 "use client";
 
@@ -12,6 +12,15 @@ type DadosPeso = {
   motorista: string;
   total_peso: number;
 };
+
+// ****** MUDANÇA AQUI ******
+// Definimos o tipo de dados que vem da API
+// (O PostgreSQL pode retornar números como strings, por isso 'string | number')
+type ApiData = {
+  motorista: string;
+  total_peso: string | number;
+};
+// ****** FIM DA MUDANÇA ******
 
 export function PesoPorMotoristaChart() {
   const [data, setData] = useState<DadosPeso[]>([]);
@@ -31,9 +40,11 @@ export function PesoPorMotoristaChart() {
         }
         
         const dadosApi = await response.json();
-        const dadosFormatados = dadosApi.map((item: any) => ({
+        
+        // ****** MUDANÇA AQUI (removemos o 'any') ******
+        const dadosFormatados = dadosApi.map((item: ApiData) => ({
           motorista: item.motorista,
-          total_peso: Number(item.total_peso)
+          total_peso: Number(item.total_peso) // Garantimos que é um número
         }));
         setData(dadosFormatados);
 
@@ -65,11 +76,11 @@ export function PesoPorMotoristaChart() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `${value / 1000}t`}
+          tickFormatter={(value) => `${value} t`} // Já está em Toneladas
         />
         <Tooltip
           cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} kg`, 'Peso Total']}
+          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} t`, 'Peso Total']} // Já está em Toneladas
         />
         <Bar dataKey="total_peso" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Peso Total" />
       </BarChart>

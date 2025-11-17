@@ -1,4 +1,4 @@
-// Arquivo: src/components/app/ValorPorProdutoChart.tsx (ARQUIVO NOVO)
+// Arquivo: src/components/app/ValorPorProdutoChart.tsx (CORRIGIDO)
 
 "use client";
 
@@ -6,13 +6,20 @@ import { useState, useEffect } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 
-// ATENÇÃO: Confirme que esta é a sua URL do RENDER
 const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 type DadosValor = {
   produto: string;
   total_valor: number;
 };
+
+// ****** MUDANÇA AQUI ******
+// Definimos o tipo de dados que vem da API
+type ApiData = {
+  produto: string;
+  total_valor: string | number;
+};
+// ****** FIM DA MUDANÇA ******
 
 export function ValorPorProdutoChart() {
   const [data, setData] = useState<DadosValor[]>([]);
@@ -32,9 +39,11 @@ export function ValorPorProdutoChart() {
         }
         
         const dadosApi = await response.json();
-        const dadosFormatados = dadosApi.map((item: any) => ({
+
+        // ****** MUDANÇA AQUI (removemos o 'any') ******
+        const dadosFormatados = dadosApi.map((item: ApiData) => ({
           produto: item.produto,
-          total_valor: Number(item.total_valor)
+          total_valor: Number(item.total_valor) // Garantimos que é um número
         }));
         setData(dadosFormatados);
 
