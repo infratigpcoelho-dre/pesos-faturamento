@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM FILTRO DE MOTORISTA)
+// Arquivo: backend/server.js (VERSÃO FINAL COM CLASSE "VISUALIZADOR")
 
 const express = require('express');
 const { Client } = require('pg');
@@ -14,14 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 1. CORREÇÃO DA PORTA
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
-// 2. CORREÇÃO DA URL: COLE A SUA URL DO *BANCO DE DADOS* POSTGRESQL AQUI
-// (Vá no Render > PostgreSQL > Info > e copie a "External URL" ou "Internal URL")
-// É a URL que você já usou antes: postgresql://bdpesos_user:UAnZ...
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
+// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -119,6 +116,15 @@ function authenticateMaster(req, res, next) {
   next();
 }
 
+// ****** NOVO "SEGURANÇA" PARA ANÁLISES ******
+// Permite que 'master' OU 'visualizador' acessem
+function authenticateAnalyticsAccess(req, res, next) {
+  if (req.user.role !== 'master' && req.user.role !== 'visualizador') {
+    return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master ou Visualizador.' });
+  }
+  next();
+}
+
 // --- ROTAS DE AUTENTICAÇÃO ---
 app.post('/register', async (req, res) => {
   try {
@@ -176,22 +182,16 @@ app.post('/login', async (req, res) => {
 });
 
 // --- ROTAS DE LANÇAMENTOS (PROTEGIDAS E FILTRADAS) ---
-// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.get('/lancamentos', authenticateToken, async (req, res) => { 
   try {
-    const { role, nome_completo } = req.user; // Pega o usuário do token
-    
+    const { role, nome_completo } = req.user;
     let query = 'SELECT * FROM lancamentos';
     let params = [];
-
-    if (role !== 'master') {
-      // Se não for master, filtra pelo nome do motorista
+    if (role === 'motorista') {
       query += ' WHERE motorista = $1';
       params.push(nome_completo);
     }
-    
     query += ' ORDER BY id DESC';
-    
     const result = await db.query(query, params); 
     res.json(result.rows); 
   } catch(e){ 
@@ -199,21 +199,16 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
   } 
 });
 
-// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { role, nome_completo } = req.user;
-    
     let query = 'SELECT * FROM lancamentos WHERE id = $1';
     let params = [id];
-
-    if (role !== 'master') {
-      // Se não for master, só pode ver se o ID for dele
+    if (role === 'motorista') {
       query += ' AND motorista = $2';
       params.push(nome_completo);
     }
-    
     const result = await db.query(query, params);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Lançamento não encontrado' });
@@ -225,8 +220,10 @@ app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Rota POST (Sem mudança na lógica, pois o motorista já se auto-insere)
 app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
+  if (req.user.role === 'visualizador') {
+    return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem criar lançamentos.' });
+  }
   try { 
     const dados = req.body;
     const caminhoNf = req.file ? req.file.filename : null;
@@ -244,8 +241,10 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
   } catch(e){ console.error("Erro no POST:", e); res.status(500).json({error: e.message}) } 
 });
 
-// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
+  if (req.user.role === 'visualizador') {
+    return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem editar lançamentos.' });
+  }
   try { 
     const { id } = req.params;
     const dados = req.body;
@@ -255,7 +254,6 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     if (lancamentoAtualResult.rowCount === 0) return res.status(404).json({e:'Não encontrado'});
     const lancamentoAtual = lancamentoAtualResult.rows[0];
 
-    // Se não for master, E o lançamento não pertencer a ele, bloqueia
     if (role !== 'master' && lancamentoAtual.motorista !== nome_completo) {
       return res.status(403).json({ error: 'Acesso negado. Você não pode editar este lançamento.' });
     }
@@ -284,8 +282,10 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
-// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
+  if (req.user.role === 'visualizador') {
+    return res.status(403).json({ error: 'Acesso negado. Visualizadores não podem excluir lançamentos.' });
+  }
   try { 
     const { id } = req.params;
     const { role, nome_completo } = req.user;
@@ -503,7 +503,7 @@ app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (re
 });
 
 // --- ROTAS DE ANALYTICS ---
-app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMaster, async (req, res) => {
+app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateAnalyticsAccess, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -520,7 +520,7 @@ app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateMast
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateMaster, async (req, res) => {
+app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateAnalyticsAccess, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
