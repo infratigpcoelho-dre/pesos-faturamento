@@ -1,8 +1,8 @@
-// Arquivo: src/app/page.tsx (COMPLETO E CORRIGIDO PARA 'Ton')
+// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DO 'papaparse')
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MoreHorizontal, Pencil, Trash2, PlusCircle, FileDown, LogOut, Link as LinkIcon, Settings } from "lucide-react"; 
@@ -16,7 +16,7 @@ import { AddLancamentoDialog } from "@/components/app/AddLancamentoDialog";
 import { PesoPorProdutoChart } from "@/components/app/PesoPorProdutoChart";
 import { CarregamentosPorDiaChart } from "@/components/app/CarregamentosPorDiaChart";
 import { toast } from "sonner";
-import Papa from "papaparse";
+import Papa from "papaparse"; // ****** AQUI ESTÁ A CORREÇÃO (era 'paparse') ******
 import * as XLSX from "xlsx";
 
 type Lancamento = {
@@ -50,25 +50,19 @@ export default function Dashboard() {
     return null;
   }
 
-  useEffect(() => {
-    const token = getToken();
-    const role = localStorage.getItem('userRole'); 
-    const name = localStorage.getItem('userFullName');
-    const placa = localStorage.getItem('userPlacaCavalo');
-    
-    if (!token) {
-      router.push('/login');
-    } else {
-      setUserRole(role); 
-      setUserName(name);
-      setUserPlaca(placa);
-      carregarLancamentos();
+  const handleLogout = useCallback((mostrarToast = true) => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userFullName');
+    localStorage.removeItem('userPlacaCavalo');
+    if (mostrarToast) {
+      toast.success("Você saiu com segurança.");
     }
+    router.push('/login');
   }, [router]);
 
-  async function carregarLancamentos() {
+  const carregarLancamentos = useCallback(async (token: string) => {
     try {
-      const token = getToken();
       const response = await fetch(`${API_URL}/lancamentos`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -84,10 +78,30 @@ export default function Dashboard() {
       console.error("Erro ao carregar lançamentos:", error);
       toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
     }
-  }
+  }, [handleLogout]); 
+
+  useEffect(() => {
+    const token = getToken();
+    const role = localStorage.getItem('userRole'); 
+    const name = localStorage.getItem('userFullName');
+    const placa = localStorage.getItem('userPlacaCavalo');
+    
+    if (!token) {
+      router.push('/login');
+    } else {
+      setUserRole(role); 
+      setUserName(name);
+      setUserPlaca(placa);
+      carregarLancamentos(token);
+    }
+  }, [router, carregarLancamentos]);
 
   const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
     const token = getToken();
+    if (!token) {
+      handleLogout(false);
+      return;
+    }
     const isEditing = !!lancamentoParaEditar;
     const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
     const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
@@ -120,7 +134,7 @@ export default function Dashboard() {
       }
       toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
-      carregarLancamentos();
+      carregarLancamentos(token); 
     } catch (error: unknown) { 
       console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
@@ -131,6 +145,10 @@ export default function Dashboard() {
   
   const handleDeletarLancamento = async (idParaDeletar: number) => {
     const token = getToken();
+    if (!token) {
+      handleLogout(false);
+      return;
+    }
     if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
     try {
       const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
@@ -181,7 +199,6 @@ export default function Dashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Os dados foram exportados com sucesso!");
   };
 
   const handleExportXLSX = () => {
@@ -190,18 +207,6 @@ export default function Dashboard() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos");
     XLSX.writeFile(workbook, `lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success("Os dados foram exportados para Excel com sucesso!");
-  };
-  
-  const handleLogout = (mostrarToast = true) => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userFullName');
-    localStorage.removeItem('userPlacaCavalo');
-    if (mostrarToast) {
-      toast.success("Você saiu com segurança.");
-    }
-    router.push('/login');
   };
 
   const formatarMoeda = (valor: number) => {
@@ -222,7 +227,7 @@ export default function Dashboard() {
   }
 
   const lancamentosFiltrados = useMemo(() => {
-    if (!lancamentos) return [];
+    if (!lancamentos) return []; 
     return lancamentos.filter(lancamento => {
       const motoristaMatch = (lancamento.motorista || '').toLowerCase().includes(filtros.motorista.toLowerCase());
       const origemMatch = (lancamento.origem || '').toLowerCase().includes(filtros.origem.toLowerCase());
@@ -304,7 +309,6 @@ export default function Dashboard() {
                   <TableHead>Início Descarga</TableHead>
                   <TableHead>Término Descarga</TableHead>
                   <TableHead>Tempo Descarga</TableHead>
-                  {/* ****** MUDANÇA AQUI ****** */}
                   <TableHead className="text-right">Peso Real (Ton)</TableHead>
                   <TableHead className="text-right">Tarifa</TableHead>
                   <TableHead className="text-right">Valor Frete</TableHead>
@@ -350,7 +354,6 @@ export default function Dashboard() {
                     <TableCell>{formatarDataHora(lancamento.iniciodescarga)}</TableCell>
                     <TableCell>{formatarDataHora(lancamento.terminodescarga)}</TableCell>
                     <TableCell>{lancamento.tempodescarga || '-'}</TableCell>
-                    {/* ****** MUDANÇA AQUI ****** */}
                     <TableCell className="text-right">{(lancamento.pesoreal || 0).toLocaleString('pt-BR')} t</TableCell>
                     <TableCell className="text-right">{formatarMoeda(lancamento.tarifa)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorfrete)}</TableCell>

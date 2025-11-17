@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COM CLASSE "VISUALIZADOR")
+// Arquivo: backend/server.js (VERSÃO FINAL COM GESTÃO DE UTILIZADORES)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
 // ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; 
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -116,8 +116,7 @@ function authenticateMaster(req, res, next) {
   next();
 }
 
-// ****** NOVO "SEGURANÇA" PARA ANÁLISES ******
-// Permite que 'master' OU 'visualizador' acessem
+// NOVO "SEGURANÇA" PARA ANÁLISES/VISUALIZAÇÃO
 function authenticateAnalyticsAccess(req, res, next) {
   if (req.user.role !== 'master' && req.user.role !== 'visualizador') {
     return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Master ou Visualizador.' });
@@ -255,7 +254,7 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
     const lancamentoAtual = lancamentoAtualResult.rows[0];
 
     if (role !== 'master' && lancamentoAtual.motorista !== nome_completo) {
-      return res.status(403).json({ error: 'Acesso negado. Você não pode editar este lançamento.' });
+      return res.status(403).json({ error: 'Acesso negado.' });
     }
 
     let caminhoNf = lancamentoAtual.caminhonf; 
@@ -310,71 +309,71 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
   } catch(e){ console.error("Erro no DELETE:", e); res.status(500).json({error: e.message}) } 
 });
 
-// --- ROTAS DE ADMIN/MOTORISTAS ---
-app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
+// --- ROTAS DE ADMIN/UTILIZADORES ---
+app.get('/api/utilizadores', authenticateToken, authenticateMaster, async (req, res) => {
   try {
-    const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role = 'motorista' ORDER BY nome_completo");
+    const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role != 'master' ORDER BY nome_completo");
     res.json(result.rows);
   } catch (err) {
-    console.error('Erro ao buscar motoristas:', err);
+    console.error('Erro ao buscar utilizadores:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-app.post('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
+app.post('/api/utilizadores', authenticateToken, authenticateMaster, async (req, res) => {
   try {
-    const { username, password, nome_completo, cpf, cnh, placa_cavalo, placas_carretas } = req.body;
-    if (!username || !password || !nome_completo) {
-      return res.status(400).json({ error: 'Login, senha e nome completo são obrigatórios.' });
+    const { username, password, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role } = req.body;
+    if (!username || !password || !nome_completo || !role) {
+      return res.status(400).json({ error: 'Login, senha, nome completo e classe são obrigatórios.' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await db.query(
       `INSERT INTO users (username, password, role, nome_completo, cpf, cnh, placa_cavalo, placas_carretas) 
-       VALUES ($1, $2, 'motorista', $3, $4, $5, $6, $7) RETURNING *`,
-      [username, hashedPassword, nome_completo, cpf, cnh, placa_cavalo, placas_carretas]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [username, hashedPassword, role, nome_completo, cpf, cnh, placa_cavalo, placas_carretas]
     );
-    const novoMotorista = result.rows[0];
-    delete novoMotorista.password;
-    res.status(201).json(novoMotorista);
+    const novoUtilizador = result.rows[0];
+    delete novoUtilizador.password;
+    res.status(201).json(novoUtilizador);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Esse nome de usuário (login) já existe.' });
-    console.error('Erro ao criar motorista:', err);
+    console.error('Erro ao criar utilizador:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-app.put('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
+app.put('/api/utilizadores/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome_completo, cpf, cnh, placa_cavalo, placas_carretas, password } = req.body;
+    const { nome_completo, cpf, cnh, placa_cavalo, placas_carretas, password, role } = req.body;
     if (password && password.length > 0) {
       const hashedPassword = await bcrypt.hash(password, 10);
       await db.query(
-        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5, password = $6 
-         WHERE id = $7 AND role = 'motorista'`,
-        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, hashedPassword, id]
+        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5, password = $6, role = $7 
+         WHERE id = $8 AND role != 'master'`,
+        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, hashedPassword, role, id]
       );
     } else {
       await db.query(
-        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5 
-         WHERE id = $6 AND role = 'motorista'`,
-        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, id]
+        `UPDATE users SET nome_completo = $1, cpf = $2, cnh = $3, placa_cavalo = $4, placas_carretas = $5, role = $6 
+         WHERE id = $7 AND role != 'master'`,
+        [nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role, id]
       );
     }
     const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
-    const motoristaAtualizado = result.rows[0];
-    delete motoristaAtualizado.password;
-    res.json(motoristaAtualizado);
+    const utilizadorAtualizado = result.rows[0];
+    delete utilizadorAtualizado.password;
+    res.json(utilizadorAtualizado);
   } catch (err) {
-    console.error('Erro ao atualizar motorista:', err);
+    console.error('Erro ao atualizar utilizador:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
-app.delete('/api/motoristas/:id', authenticateToken, authenticateMaster, async (req, res) => {
+app.delete('/api/utilizadores/:id', authenticateToken, authenticateMaster, async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query("DELETE FROM users WHERE id = $1 AND role = 'motorista'", [id]);
+    await db.query("DELETE FROM users WHERE id = $1 AND role != 'master'", [id]);
     res.status(204).send();
   } catch (err) {
-    console.error('Erro ao deletar motorista:', err);
+    console.error('Erro ao deletar utilizador:', err);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
