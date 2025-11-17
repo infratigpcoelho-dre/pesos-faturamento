@@ -14,11 +14,14 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// 1. CORREÇÃO DA PORTA
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5';
 
-// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
-const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos'; // <--- VERIFIQUE SE ESTA É A URL DO SEU BANCO!
+// 2. CORREÇÃO DA URL: COLE A SUA URL DO *BANCO DE DADOS* POSTGRESQL AQUI
+// (Vá no Render > PostgreSQL > Info > e copie a "External URL" ou "Internal URL")
+// É a URL que você já usou antes: postgresql://bdpesos_user:UAnZ...
+const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
   connectionString: DATABASE_URL,
@@ -173,7 +176,7 @@ app.post('/login', async (req, res) => {
 });
 
 // --- ROTAS DE LANÇAMENTOS (PROTEGIDAS E FILTRADAS) ---
-// ****** MUDANÇA 1: GET Todos os Lançamentos ******
+// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.get('/lancamentos', authenticateToken, async (req, res) => { 
   try {
     const { role, nome_completo } = req.user; // Pega o usuário do token
@@ -196,7 +199,7 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
   } 
 });
 
-// ****** MUDANÇA 2: GET Lançamento por ID ******
+// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -213,7 +216,6 @@ app.get('/lancamentos/:id', authenticateToken, async (req, res) => {
     
     const result = await db.query(query, params);
     if (result.rowCount === 0) {
-      // Se não encontrou (ou não tem permissão), retorna 404
       return res.status(404).json({ error: 'Lançamento não encontrado' });
     }
     res.json(result.rows[0]);
@@ -242,7 +244,7 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
   } catch(e){ console.error("Erro no POST:", e); res.status(500).json({error: e.message}) } 
 });
 
-// ****** MUDANÇA 3: PUT (Editar) Lançamento ******
+// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
   try { 
     const { id } = req.params;
@@ -282,7 +284,7 @@ app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async
   } catch(e){ console.error("Erro no PUT:", e); res.status(500).json({error: e.message}) } 
 });
 
-// ****** MUDANÇA 4: DELETE (Excluir) Lançamento ******
+// ****** ESTA É A LÓGICA DE SEGURANÇA QUE FALTAVA ******
 app.delete('/lancamentos/:id', authenticateToken, async (req, res) => { 
   try { 
     const { id } = req.params;
