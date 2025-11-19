@@ -1,4 +1,4 @@
-// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO PARA UTILIZADORES)
+// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO ERRO DE HYDRATION/WHITESPACE)
 
 "use client";
 
@@ -27,8 +27,7 @@ type Motorista = {
 
 type FormData = { [key: string]: string | number | undefined; };
 
-// ROTA CORRETA: /api/utilizadores
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
+const API_URL = 'https://api-pesos-faturamento.onrender.com';
 
 export default function GerenciarMotoristasPage() {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
@@ -43,11 +42,10 @@ export default function GerenciarMotoristasPage() {
     return null;
   }
 
-  // Busca os motoristas do backend
   async function carregarMotoristas() {
     try {
       const token = getToken();
-      // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
+      // Rota correta (utilizadores)
       const response = await fetch(`${API_URL}/api/utilizadores`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -56,13 +54,13 @@ export default function GerenciarMotoristasPage() {
         router.push('/');
         return;
       }
-      if (!response.ok) throw new Error('Falha ao buscar motoristas');
+      if (!response.ok) throw new Error('Falha ao buscar utilizadores');
       
       const data = await response.json();
       setMotoristas(data);
     } catch (error: unknown) { 
       console.error("Erro ao carregar motoristas:", error);
-      let message = "Não foi possível carregar os motoristas. Verifique o console para detalhes.";
+      let message = "Não foi possível carregar os utilizadores. Verifique o console para detalhes.";
       toast.error(message);
     }
   }
@@ -71,19 +69,16 @@ export default function GerenciarMotoristasPage() {
     carregarMotoristas();
   }, []);
 
-  // Lida com Salvar (Criar ou Editar)
   const handleSalvarMotorista = async (dadosDoFormulario: FormData) => {
     const token = getToken();
     const isEditing = !!motoristaParaEditar;
     
-    // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
     const url = isEditing
       ? `${API_URL}/api/utilizadores/${motoristaParaEditar.id}`
       : `${API_URL}/api/utilizadores`;
     
     const method = isEditing ? 'PUT' : 'POST';
 
-    // Remove a senha se estiver vazia (para não atualizar)
     if (isEditing && (!dadosDoFormulario.password || dadosDoFormulario.password === '')) {
       delete dadosDoFormulario.password;
     }
@@ -97,35 +92,33 @@ export default function GerenciarMotoristasPage() {
 
       if (!response.ok) {
          const errorData = await response.json().catch(() => ({ error: "Erro de rede ou servidor." }));
-         throw new Error(errorData.error || 'Falha ao salvar motorista');
+         throw new Error(errorData.error || 'Falha ao salvar utilizador');
       }
       
-      toast.success(`Motorista ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
+      toast.success(`Utilizador ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
-      carregarMotoristas(); // Recarrega a lista
+      carregarMotoristas();
 
     } catch (error: unknown) {
-      let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o motorista.`;
+      let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o utilizador.`;
       if (error instanceof Error) message = error.message;
       toast.error(message);
     }
   };
 
-  // Lida com Deletar
   const handleDeletarMotorista = async (idParaDeletar: number) => {
     const token = getToken();
-    if (!window.confirm("Tem certeza que deseja excluir este motorista? Esta ação é permanente.")) return;
+    if (!window.confirm("Tem certeza que deseja excluir este utilizador? Esta ação é permanente.")) return;
     try {
-      // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
       const response = await fetch(`${API_URL}/api/utilizadores/${idParaDeletar}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Falha ao deletar motorista');
+      if (!response.ok) throw new Error('Falha ao deletar utilizador');
       setMotoristas(motoristas.filter((m) => m.id !== idParaDeletar));
-      toast.success("Motorista excluído com sucesso!");
+      toast.success("Utilizador excluído com sucesso!");
     } catch (error: unknown) {
-      let message = "Não foi possível excluir o motorista.";
+      let message = "Não foi possível excluir o utilizador.";
       if (error instanceof Error) message = error.message;
       toast.error(message);
     }
@@ -177,11 +170,16 @@ export default function GerenciarMotoristasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* ****** CORREÇÃO DO ERRO DE WHITESPACE/HYDRATION AQUI ****** */}
                 {motoristas.map((motorista) => (
                   <TableRow key={motorista.id}>
                     <TableCell className="text-center">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleAbrirDialogParaEditar(motorista)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDeletarMotorista(motorista.id)} className="text-red-600 focus:bg-red-100 focus:text-red-700"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
@@ -190,12 +188,13 @@ export default function GerenciarMotoristasPage() {
                     </TableCell>
                     <TableCell className="font-medium">{motorista.nome_completo || '-'}</TableCell>
                     <TableCell>{motorista.username || '-'}</TableCell>
-                    <TableCell>{motorista.role || '-'}</TableCell> {/* Exibe a classe */}
+                    <TableCell>{motorista.role || '-'}</TableCell>
                     <TableCell>{motorista.cpf || '-'}</TableCell>
                     <TableCell>{motorista.cnh || '-'}</TableCell>
                     <TableCell>{motorista.placa_cavalo || '-'}</TableCell>
                   </TableRow>
                 ))}
+                {/* ****** FIM DA CORREÇÃO ****** */}
               </TableBody>
             </Table>
           </div>
