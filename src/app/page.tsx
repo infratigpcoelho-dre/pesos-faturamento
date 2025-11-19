@@ -226,10 +226,11 @@ export default function Dashboard() {
     }
   }
 
-  // ****** CORREÇÃO DO ERRO 'length' ESTÁ AQUI ******
-  // Garantimos que 'lancamentos' é um array antes de filtrar
+  // ****** A CORREÇÃO FINAL: Garantindo que lancamentos é um array ******
   const lancamentosFiltrados = useMemo(() => {
-    if (!lancamentos) return []; 
+    // Se lancamentos não for um array (ou for null/undefined), retorna array vazio [].
+    if (!Array.isArray(lancamentos)) return []; 
+    
     return lancamentos.filter(lancamento => {
       const motoristaMatch = (lancamento.motorista || '').toLowerCase().includes(filtros.motorista.toLowerCase());
       const origemMatch = (lancamento.origem || '').toLowerCase().includes(filtros.origem.toLowerCase());
