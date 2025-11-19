@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL 100% COMPLETA - CORRIGE ETIMEDOUT E CRIAÇÃO DE TABELAS)
+// Arquivo: backend/server.js (VERSÃO FINAL 100% COMPLETA E CORRIGIDA PARA DEPLOY)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5'; // Sua chave secreta
 
 // ****** CORREÇÃO CRÍTICA: URL CORRETA DO BANCO DE DADOS ******
-// Esta é a URL correta para o seu banco de dados PostgreSQL no Render.
+// Esta é a URL correta do seu banco de dados PostgreSQL. O erro anterior era usar o endereço HTTP do site.
 const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
@@ -40,7 +40,7 @@ async function setupDatabase() {
     console.log("Conectado ao banco de dados com sucesso!");
   } catch (err) {
     console.error("Erro ao conectar ao banco (verifique a URL e o IP no Render):", err);
-    throw err; 
+    throw err; // Lança o erro para o servidor Render parar
   }
   
   // 1. Criação das Tabelas Principais
@@ -102,8 +102,9 @@ function authenticateAnalyticsAccess(req, res, next) {
 app.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const hashed = await bcrypt.hash(password, 10);
-    const result = await db.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', [username, hashed, 'motorista']);
+    if (!username || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await db.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role', [username, hashedPassword, 'motorista']);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Nome de usuário já existe.' });
@@ -115,8 +116,8 @@ app.post('/register-master', async (req, res) => {
   try {
     const { username, password, nome_completo } = req.body;
     if (!username || !password || !nome_completo) return res.status(400).json({ error: 'Login, senha e nome completo são obrigatórios.' });
-    const hashed = await bcrypt.hash(password, 10);
-    const result = await db.query('INSERT INTO users (username, password, role, nome_completo) VALUES ($1, $2, $3, $4) RETURNING id, username, role', [username, hashed, 'master', nome_completo]);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await db.query('INSERT INTO users (username, password, role, nome_completo) VALUES ($1, $2, $3, $4) RETURNING id, username, role', [username, hashedPassword, 'master', nome_completo]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Nome de usuário já existe.' });
@@ -137,7 +138,7 @@ app.post('/login', async (req, res) => {
     } else {
       res.status(401).json({error: 'Inválido'});
     }
-  } catch(e) { res.status(500).json({error: e.message}); }
+  } catch(e) { console.error('Erro no login:', e); res.status(500).json({error: e.message}); }
 });
 
 // --- ROTAS DE LANÇAMENTOS (PROTEGIDAS E FILTRADAS) ---
@@ -183,7 +184,7 @@ app.post('/lancamentos', authenticateToken, upload.single('arquivoNf'), async (r
       [d.data, d.horapostada, d.origem, d.destino, d.iniciodescarga, d.terminodescarga, d.tempodescarga, d.ticket, Number(d.pesoreal)||0, Number(d.tarifa)||0, d.nf, d.cavalo, d.motorista, Number(d.valorfrete)||0, d.obs, d.produto, f]
     ); 
     res.status(201).json(r.rows[0]); 
-  } catch(e){ res.status(500).json({error: e.message}) } 
+  } catch(e){ res.status(500).json({error: e.message}); }
 });
 
 app.put('/lancamentos/:id', authenticateToken, upload.single('arquivoNf'), async (req, res) => { 
