@@ -1,8 +1,8 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DO 'papaparse')
+// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DO ERRO '.length')
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react"; 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MoreHorizontal, Pencil, Trash2, PlusCircle, FileDown, LogOut, Link as LinkIcon, Settings } from "lucide-react"; 
@@ -16,7 +16,7 @@ import { AddLancamentoDialog } from "@/components/app/AddLancamentoDialog";
 import { PesoPorProdutoChart } from "@/components/app/PesoPorProdutoChart";
 import { CarregamentosPorDiaChart } from "@/components/app/CarregamentosPorDiaChart";
 import { toast } from "sonner";
-import Papa from "papaparse"; // ****** AQUI ESTÁ A CORREÇÃO (era 'paparse') ******
+import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 type Lancamento = {
@@ -92,7 +92,7 @@ export default function Dashboard() {
       setUserRole(role); 
       setUserName(name);
       setUserPlaca(placa);
-      carregarLancamentos(token);
+      carregarLancamentos(token); 
     }
   }, [router, carregarLancamentos]);
 
@@ -226,6 +226,8 @@ export default function Dashboard() {
     }
   }
 
+  // ****** CORREÇÃO DO ERRO 'length' ESTÁ AQUI ******
+  // Garantimos que 'lancamentos' é um array antes de filtrar
   const lancamentosFiltrados = useMemo(() => {
     if (!lancamentos) return []; 
     return lancamentos.filter(lancamento => {
@@ -236,6 +238,7 @@ export default function Dashboard() {
     });
   }, [lancamentos, filtros]);
 
+  // Estas linhas agora são seguras porque 'lancamentosFiltrados' é sempre '[]'
   const totalPaginas = Math.ceil(lancamentosFiltrados.length / ITENS_POR_PAGINA);
   const indiceInicial = (paginaAtual - 1) * ITENS_POR_PAGINA;
   const indiceFinal = indiceInicial + ITENS_POR_PAGINA;

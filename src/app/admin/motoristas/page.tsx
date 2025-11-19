@@ -1,4 +1,4 @@
-// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO)
+// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO PARA UTILIZADORES)
 
 "use client";
 
@@ -11,40 +11,44 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { MotoristaDialog } from "@/components/app/MotoristaDialog";
+import { MotoristaDialog } from "@/components/app/MotoristaDialog"; 
 
 // O tipo para os dados do motorista (usuário)
 type Motorista = {
   id: number;
   username: string;
-  nome_completo: string;
-  cpf: string;
-  cnh: string;
-  placa_cavalo: string;
-  placas_carretas: string;
+  nome_completo: string | null;
+  cpf: string | null;
+  cnh: string | null;
+  placa_cavalo: string | null;
+  placas_carretas: string | null;
   role: string;
 };
 
-// O tipo para os dados do formulário
 type FormData = { [key: string]: string | number | undefined; };
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
+// ROTA CORRETA: /api/utilizadores
+const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
 
 export default function GerenciarMotoristasPage() {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  // ****** CORREÇÃO DE TIPO 1 ******
-  // O estado agora espera um 'Motorista' (o tipo real que vem da tabela) ou 'null'
   const [motoristaParaEditar, setMotoristaParaEditar] = useState<Motorista | null>(null);
   const router = useRouter();
 
-  const getToken = () => localStorage.getItem('authToken');
+  const getToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem('authToken');
+    }
+    return null;
+  }
 
+  // Busca os motoristas do backend
   async function carregarMotoristas() {
     try {
       const token = getToken();
-      const response = await fetch(`${API_URL}/api/motoristas`, {
+      // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
+      const response = await fetch(`${API_URL}/api/utilizadores`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.status === 401 || response.status === 403) {
@@ -56,16 +60,10 @@ export default function GerenciarMotoristasPage() {
       
       const data = await response.json();
       setMotoristas(data);
-    } catch (error: unknown) { // Corrigido para 'unknown'
+    } catch (error: unknown) { 
       console.error("Erro ao carregar motoristas:", error);
-      // Aqui tratamos o erro "is not valid JSON"
-      if (error instanceof SyntaxError) {
-        toast.error("Erro de comunicação com o servidor. A resposta não é um JSON válido.");
-      } else if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Não foi possível carregar os motoristas.");
-      }
+      let message = "Não foi possível carregar os motoristas. Verifique o console para detalhes.";
+      toast.error(message);
     }
   }
 
@@ -73,17 +71,19 @@ export default function GerenciarMotoristasPage() {
     carregarMotoristas();
   }, []);
 
+  // Lida com Salvar (Criar ou Editar)
   const handleSalvarMotorista = async (dadosDoFormulario: FormData) => {
     const token = getToken();
     const isEditing = !!motoristaParaEditar;
     
-    // O 'id' vem do estado 'motoristaParaEditar', não do formulário
+    // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
     const url = isEditing
-      ? `${API_URL}/api/motoristas/${motoristaParaEditar.id}`
-      : `${API_URL}/api/motoristas`;
+      ? `${API_URL}/api/utilizadores/${motoristaParaEditar.id}`
+      : `${API_URL}/api/utilizadores`;
     
     const method = isEditing ? 'PUT' : 'POST';
 
+    // Remove a senha se estiver vazia (para não atualizar)
     if (isEditing && (!dadosDoFormulario.password || dadosDoFormulario.password === '')) {
       delete dadosDoFormulario.password;
     }
@@ -96,13 +96,13 @@ export default function GerenciarMotoristasPage() {
       });
 
       if (!response.ok) {
-         const errorData = await response.json();
+         const errorData = await response.json().catch(() => ({ error: "Erro de rede ou servidor." }));
          throw new Error(errorData.error || 'Falha ao salvar motorista');
       }
       
       toast.success(`Motorista ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
       setIsDialogOpen(false);
-      carregarMotoristas();
+      carregarMotoristas(); // Recarrega a lista
 
     } catch (error: unknown) {
       let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o motorista.`;
@@ -111,11 +111,13 @@ export default function GerenciarMotoristasPage() {
     }
   };
 
+  // Lida com Deletar
   const handleDeletarMotorista = async (idParaDeletar: number) => {
     const token = getToken();
     if (!window.confirm("Tem certeza que deseja excluir este motorista? Esta ação é permanente.")) return;
     try {
-      const response = await fetch(`${API_URL}/api/motoristas/${idParaDeletar}`, {
+      // ****** MUDANÇA CRÍTICA: CHAMANDO /api/utilizadores ******
+      const response = await fetch(`${API_URL}/api/utilizadores/${idParaDeletar}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -135,7 +137,6 @@ export default function GerenciarMotoristasPage() {
   };
   
   const handleAbrirDialogParaEditar = (motorista: Motorista) => {
-    // Agora os tipos são compatíveis!
     setMotoristaParaEditar(motorista);
     setIsDialogOpen(true);
   };
@@ -150,16 +151,16 @@ export default function GerenciarMotoristasPage() {
               <span className="sr-only">Voltar</span>
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Motoristas</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Utilizadores</h1>
         </div>
         <Button onClick={handleAbrirDialogParaCriar}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Motorista
+          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Utilizador
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Motoristas Cadastrados ({motoristas.length})</CardTitle>
+          <CardTitle>Utilizadores Cadastrados ({motoristas.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative w-full overflow-auto">
@@ -169,6 +170,7 @@ export default function GerenciarMotoristasPage() {
                   <TableHead className="w-[80px] text-center">Ações</TableHead>
                   <TableHead>Nome Completo</TableHead>
                   <TableHead>Login (Usuário)</TableHead>
+                  <TableHead>Classe</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>CNH</TableHead>
                   <TableHead>Placa Cavalo</TableHead>
@@ -186,11 +188,12 @@ export default function GerenciarMotoristasPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                    <TableCell className="font-medium">{motorista.nome_completo}</TableCell>
-                    <TableCell>{motorista.username}</TableCell>
-                    <TableCell>{motorista.cpf}</TableCell>
-                    <TableCell>{motorista.cnh}</TableCell>
-                    <TableCell>{motorista.placa_cavalo}</TableCell>
+                    <TableCell className="font-medium">{motorista.nome_completo || '-'}</TableCell>
+                    <TableCell>{motorista.username || '-'}</TableCell>
+                    <TableCell>{motorista.role || '-'}</TableCell> {/* Exibe a classe */}
+                    <TableCell>{motorista.cpf || '-'}</TableCell>
+                    <TableCell>{motorista.cnh || '-'}</TableCell>
+                    <TableCell>{motorista.placa_cavalo || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -199,19 +202,11 @@ export default function GerenciarMotoristasPage() {
         </CardContent>
       </Card>
       
-      {/* ****** CORREÇÃO DE TIPO 2 ******
-          O 'MotoristaDialog' espera 'initialData' do tipo 'FormData | null'
-          mas nosso estado 'motoristaParaEditar' é 'Motorista | null'.
-          Não há problema, pois 'Motorista' é compatível com a estrutura de 'FormData'.
-          O TypeScript estava certo em avisar, mas o código anterior estava funcional,
-          embora gerasse o erro de tipo.
-          A mudança no 'useState' para 'Motorista | null' é a mais correta.
-      */}
       <MotoristaDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSave={handleSalvarMotorista}
-        initialData={motoristaParaEditar} 
+        initialData={motoristaParaEditar}
       />
     </main>
   );
