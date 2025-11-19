@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL 100% COMPLETA E CORRIGIDA PARA DEPLOY)
+// Arquivo: backend/server.js (VERSÃO FINAL 100% CORRETA E COMPLETA)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -17,8 +17,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5'; 
 
-// ****** CORREÇÃO CRÍTICA: URL CORRETA DO BANCO DE DADOS ******
-// Esta é a URL correta do seu banco de dados PostgreSQL. O erro anterior era usar o endereço HTTP do site.
+// ATENÇÃO: Confirme que sua URL do Render está aqui (a que começa com postgres://)
 const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
@@ -40,10 +39,10 @@ async function setupDatabase() {
     console.log("Conectado ao banco de dados com sucesso!");
   } catch (err) {
     console.error("Erro ao conectar ao banco (verifique a URL e o IP no Render):", err);
-    throw err; // Lança o erro para o servidor Render parar
+    throw err; 
   }
   
-  // 1. Criação das Tabelas Principais
+  // 1. Criação das Tabelas Principais
   await db.query(`
     CREATE TABLE IF NOT EXISTS lancamentos (
       id SERIAL PRIMARY KEY, data TEXT, horapostada TEXT, origem TEXT,
@@ -112,6 +111,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 });
+
 app.post('/register-master', async (req, res) => {
   try {
     const { username, password, nome_completo } = req.body;
@@ -224,19 +224,6 @@ app.delete('/lancamentos/:id', authenticateToken, async (req, res) => {
 });
 
 // --- ROTAS DE ADMIN/UTILIZADORES ---
-
-// ROTA DE CORREÇÃO: RETORNA APENAS USUÁRIOS COM ROLE = 'MOTORISTA'
-app.get('/api/motoristas', authenticateToken, authenticateMaster, async (req, res) => {
-    try {
-        const result = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role = 'motorista' ORDER BY nome_completo");
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Erro ao buscar motoristas:', err);
-        res.status(500).json({ error: 'Erro interno do servidor.' });
-    }
-});
-// FIM ROTA DE CORREÇÃO
-
 app.get('/api/utilizadores', authenticateToken, authenticateMaster, async (req, res) => {
   try { const r = await db.query("SELECT id, username, nome_completo, cpf, cnh, placa_cavalo, placas_carretas, role FROM users WHERE role != 'master' ORDER BY nome_completo"); res.json(r.rows); } 
   catch(e) { res.status(500).json({error: e.message}); }
@@ -284,18 +271,18 @@ app.put('/api/destinos/:id', authenticateToken, authenticateMaster, async (req, 
 app.delete('/api/destinos/:id', authenticateToken, authenticateMaster, async (req, res) => { await db.query("DELETE FROM destinos WHERE id=$1", [req.params.id]); res.sendStatus(204); });
 
 app.get('/api/analytics/peso-por-motorista', authenticateToken, authenticateAnalyticsAccess, async (req, res) => {
-  const r = await db.query("SELECT motorista, SUM(pesoreal) as total_peso FROM lancamentos WHERE motorista IS NOT NULL AND motorista != '' AND pesoreal > 0 GROUP BY motorista ORDER BY total_peso DESC");
-  res.json(r.rows);
+  const r = await db.query("SELECT motorista, SUM(pesoreal) as total_peso FROM lancamentos WHERE motorista IS NOT NULL AND motorista != '' AND pesoreal > 0 GROUP BY motorista ORDER BY total_peso DESC");
+  res.json(r.rows);
 });
 app.get('/api/analytics/valor-por-produto', authenticateToken, authenticateAnalyticsAccess, async (req, res) => {
-  const r = await db.query("SELECT produto, SUM(valorfrete) as total_valor FROM lancamentos WHERE produto IS NOT NULL AND produto != '' AND valorfrete > 0 GROUP BY produto ORDER BY total_valor DESC");
-  res.json(r.rows);
+  const r = await db.query("SELECT produto, SUM(valorfrete) as total_valor FROM lancamentos WHERE produto IS NOT NULL AND produto != '' AND valorfrete > 0 GROUP BY produto ORDER BY total_valor DESC");
+  res.json(r.rows);
 });
 
 // Inicia o servidor
 setupDatabase().then(() => {
-  app.listen(PORT, () => console.log(`✅ Servidor backend rodando na porta ${PORT}`));
+  app.listen(PORT, () => console.log(`✅ Servidor backend rodando na porta ${PORT}`));
 }).catch(err => {
-  console.error('❌ Falha ao iniciar o banco de dados:', err);
-  if (db) db.end();
+  console.error('❌ Falha ao iniciar o banco de dados:', err);
+  if (db) db.end();
 });
