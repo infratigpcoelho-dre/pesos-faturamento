@@ -1,4 +1,4 @@
-// Arquivo: backend/server.js (VERSÃO FINAL COMPLETA E CORRIGIDA PARA DEPLOY)
+// Arquivo: backend/server.js (VERSÃO FINAL 100% COMPLETA E CORRIGIDA PARA DEPLOY)
 
 const express = require('express');
 const { Client } = require('pg');
@@ -15,10 +15,10 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 3001; 
-const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5'; // Sua chave secreta
+const JWT_SECRET = 'bE3r]=98Gne<c=$^iezw7Bf68&5zPU319rW#pPa9iegutMeJ1y1y18moHW8Z[To5'; 
 
 // ****** CORREÇÃO CRÍTICA: URL CORRETA DO BANCO DE DADOS ******
-// Esta é a URL correta do seu banco de dados PostgreSQL
+// Esta é a URL correta do seu banco de dados PostgreSQL. O erro anterior era usar o endereço HTTP do site.
 const DATABASE_URL = 'postgresql://bdpesos_user:UAnZKty8Q8FieCQPoW6wTNJEspOUfPbw@dpg-d3ra513e5dus73b586l0-a.oregon-postgres.render.com/bdpesos';
 
 const db = new Client({
@@ -40,7 +40,7 @@ async function setupDatabase() {
     console.log("Conectado ao banco de dados com sucesso!");
   } catch (err) {
     console.error("Erro ao conectar ao banco (verifique a URL e o IP no Render):", err);
-    throw err; 
+    throw err; // Lança o erro para o servidor Render parar
   }
   
   // 1. Criação das Tabelas Principais
