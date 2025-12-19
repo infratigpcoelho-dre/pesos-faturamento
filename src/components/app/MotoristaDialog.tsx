@@ -7,19 +7,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Definição do tipo para os dados do formulário (Remove o erro de 'any')
+interface MotoristaFormData {
+  username: string;
+  password?: string;
+  nome_completo: string;
+  role: string;
+  cpf: string;
+  cnh: string;
+  placa_cavalo: string;
+  placas_carretas: string;
+}
+
 type MotoristaDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: any) => void;
-  initialData?: any;
+  onSave: (data: MotoristaFormData) => void;
+  initialData?: MotoristaFormData | null;
 };
 
 export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: MotoristaDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MotoristaFormData>({
     username: "",
     password: "",
     nome_completo: "",
-    role: "motorista", // Valor padrão
+    role: "motorista",
     cpf: "",
     cnh: "",
     placa_cavalo: "",
@@ -28,37 +40,40 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
 
   // Limpa ou preenche o formulário quando o Dialog abre
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        username: initialData.username || "",
-        password: "", // Senha nunca vem do banco por segurança
-        nome_completo: initialData.nome_completo || "",
-        role: initialData.role || "motorista",
-        cpf: initialData.cpf || "",
-        cnh: initialData.cnh || "",
-        placa_cavalo: initialData.placa_cavalo || "",
-        placas_carretas: initialData.placas_carretas || "",
-      });
-    } else {
-      setFormData({
-        username: "",
-        password: "",
-        nome_completo: "",
-        role: "motorista",
-        cpf: "",
-        cnh: "",
-        placa_cavalo: "",
-        placas_carretas: "",
-      });
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          username: initialData.username || "",
+          password: "", 
+          nome_completo: initialData.nome_completo || "",
+          role: initialData.role || "motorista",
+          cpf: initialData.cpf || "",
+          cnh: initialData.cnh || "",
+          placa_cavalo: initialData.placa_cavalo || "",
+          placas_carretas: initialData.placas_carretas || "",
+        });
+      } else {
+        setFormData({
+          username: "",
+          password: "",
+          nome_completo: "",
+          role: "motorista",
+          cpf: "",
+          cnh: "",
+          placa_cavalo: "",
+          placas_carretas: "",
+        });
+      }
     }
   }, [initialData, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleRoleChange = (value: string) => {
-    setFormData({ ...formData, role: value });
+    setFormData((prev) => ({ ...prev, role: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -75,13 +90,11 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
         
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           
-          {/* NOME COMPLETO */}
           <div className="grid gap-2">
             <Label htmlFor="nome_completo">Nome Completo</Label>
             <Input id="nome_completo" name="nome_completo" value={formData.nome_completo} onChange={handleChange} required />
           </div>
 
-          {/* CLASSE DE USUÁRIO (O SELETOR QUE VOCÊ PEDIU) */}
           <div className="grid gap-2">
             <Label htmlFor="role">Classe de Usuário (Permissões)</Label>
             <Select value={formData.role} onValueChange={handleRoleChange}>
@@ -97,13 +110,11 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* LOGIN */}
             <div className="grid gap-2">
               <Label htmlFor="username">Login (Usuário)</Label>
               <Input id="username" name="username" value={formData.username} onChange={handleChange} required />
             </div>
 
-            {/* SENHA */}
             <div className="grid gap-2">
               <Label htmlFor="password">{initialData ? "Nova Senha (opcional)" : "Senha"}</Label>
               <Input id="password" name="password" type="password" value={formData.password} onChange={handleChange} required={!initialData} />
@@ -115,7 +126,6 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
             <Input id="cpf" name="cpf" value={formData.cpf} onChange={handleChange} />
           </div>
 
-          {/* CAMPOS ESPECÍFICOS PARA MOTORISTA (Somente aparecem se for motorista) */}
           {formData.role === 'motorista' && (
             <div className="border-t pt-4 mt-2 grid gap-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase">Dados do Condutor/Veículo</p>
@@ -130,13 +140,13 @@ export function MotoristaDialog({ isOpen, onOpenChange, onSave, initialData }: M
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="placas_carretas">Placas Carretas</Label>
-                  <Input id="placas_carretas" name="placas_carretas" value={formData.placas_carretas} onChange={handleChange} placeholder="DEF-5678, GHI-9012" />
+                  <Input id="placas_carretas" name="placas_carretas" value={formData.placas_carretas} onChange={handleChange} placeholder="Placa 1, Placa 2" />
                 </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-6 gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit">Salvar Usuário</Button>
           </DialogFooter>
