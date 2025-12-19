@@ -1,91 +1,129 @@
-// Arquivo: src/app/admin/destinos/page.tsx (NOVO)
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { DestinoDialog } from "@/components/app/DestinoDialog"; 
 
-type Destino = { id: number; nome: string | null; };
-type FormData = { [key: string]: string | number | undefined; };
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
+interface Destino {
+  id: number;
+  nome: string;
+}
 
-export default function GerenciarDestinosPage() {
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+    ? 'http://localhost:3001' 
+    : '/api';
+
+export default function GerenciarDestinos() {
   const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [destinoParaEditar, setDestinoParaEditar] = useState<Destino | null>(null);
-  const router = useRouter();
-  const getToken = () => typeof window !== "undefined" ? localStorage.getItem('authToken') : null;
+  const [novoDestino, setNovoDestino] = useState("");
 
-  async function carregarDestinos() {
+  const carregarDestinos = useCallback(async () => {
     try {
-      const token = getToken();
-      const response = await fetch(`${API_URL}/api/destinos`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.status === 401 || response.status === 403) { toast.error("Sessão expirou."); router.push('/'); return; }
-      if (!response.ok) throw new Error('Falha');
-      setDestinos(await response.json());
-    } catch (error) { toast.error("Erro ao carregar destinos."); }
-  }
-  useEffect(() => { carregarDestinos(); }, []);
-
-  const handleSalvar = async (dados: FormData) => {
-    const token = getToken();
-    const isEditing = !!destinoParaEditar;
-    const url = isEditing ? `${API_URL}/api/destinos/${destinoParaEditar.id}` : `${API_URL}/api/destinos`;
-    const method = isEditing ? 'PUT' : 'POST';
-    try {
-      const response = await fetch(url, {
-        method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(dados)
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/destinos`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error();
-      toast.success(`Destino ${isEditing ? 'atualizado' : 'salvo'}!`);
-      setIsDialogOpen(false);
-      carregarDestinos();
-    } catch (e) { toast.error("Erro ao salvar."); }
+      if (res.ok) {
+        const data = await res.json();
+        setDestinos(data);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar destinos:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarDestinos();
+  }, [carregarDestinos]);
+
+  const handleAdicionar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novoDestino.trim()) return;
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/destinos`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ nome: novoDestino })
+      });
+
+      if (res.ok) {
+        toast.success("Destino adicionado!");
+        setNovoDestino("");
+        carregarDestinos();
+      }
+    } catch (err) {
+      toast.error("Erro ao salvar.");
+      console.error(err);
+    }
   };
 
-  const handleDeletar = async (id: number) => {
-    if (!confirm("Excluir este destino?")) return;
+  const handleExcluir = async (id: number) => {
+    if (!confirm("Deseja excluir este destino?")) return;
     try {
-      const response = await fetch(`${API_URL}/api/destinos/${id}`, {
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` }
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/destinos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error();
-      setDestinos(destinos.filter((d) => d.id !== id));
-      toast.success("Excluído!");
-    } catch (e) { toast.error("Erro ao excluir."); }
+      if (res.ok) {
+        toast.success("Excluído com sucesso.");
+        carregarDestinos();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" asChild><Link href="/admin"><ArrowLeft className="h-4 w-4" /><span className="sr-only">Voltar</span></Link></Button>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Destinos</h1>
-        </div>
-        <Button onClick={() => { setDestinoParaEditar(null); setIsDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Destino</Button>
-      </div>
-      <Card><CardHeader><CardTitle>Destinos ({destinos.length})</CardTitle></CardHeader><CardContent>
-          <div className="relative w-full overflow-auto">
-            <Table><TableHeader><TableRow><TableHead>Ações</TableHead><TableHead>Nome</TableHead></TableRow></TableHeader>
-              <TableBody>{destinos.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setDestinoParaEditar(d); setIsDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeletar(d.id)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                        </DropdownMenuContent></DropdownMenu></TableCell>
-                    <TableCell>{d.nome || '-'}</TableCell>
-                  </TableRow>))}
-              </TableBody></Table></div></CardContent></Card>
-      <DestinoDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} onSave={handleSalvar} initialData={destinoParaEditar} />
-    </main>
+    <div className="p-8 space-y-6">
+      <h1 className="text-2xl font-bold">Gerenciar Destinos</h1>
+      <Card>
+        <CardHeader><CardTitle>Novo Destino</CardTitle></CardHeader>
+        <CardContent>
+          <form onSubmit={handleAdicionar} className="flex gap-4 items-end">
+            <div className="grid gap-2 flex-1">
+              <Label htmlFor="nome">Nome do Destino</Label>
+              <Input id="nome" value={novoDestino} onChange={(e) => setNovoDestino(e.target.value)} placeholder="Ex: Usina X" />
+            </div>
+            <Button type="submit"><Plus className="mr-2 h-4 w-4" /> Adicionar</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {destinos.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium">{d.nome}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => handleExcluir(d.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

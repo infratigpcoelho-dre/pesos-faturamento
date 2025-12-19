@@ -1,125 +1,129 @@
-// Arquivo: src/app/admin/origens/page.tsx (NOVO)
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { OrigemDialog } from "@/components/app/OrigemDialog"; 
 
-type Origem = {
+interface Origem {
   id: number;
-  nome: string | null;
-};
+  nome: string;
+}
 
-type FormData = { [key: string]: string | number | undefined; };
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+    ? 'http://localhost:3001' 
+    : '/api';
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
-
-export default function GerenciarOrigensPage() {
+export default function GerenciarOrigens() {
   const [origens, setOrigens] = useState<Origem[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [origemParaEditar, setOrigemParaEditar] = useState<Origem | null>(null);
-  const router = useRouter();
+  const [novaOrigem, setNovaOrigem] = useState("");
 
-  const getToken = () => typeof window !== "undefined" ? localStorage.getItem('authToken') : null;
-
-  async function carregarOrigens() {
+  const carregarOrigens = useCallback(async () => {
     try {
-      const token = getToken();
-      const response = await fetch(`${API_URL}/api/origens`, {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/origens`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (response.status === 401 || response.status === 403) {
-        toast.error("Sessão expirou.");
-        router.push('/');
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        setOrigens(data);
       }
-      if (!response.ok) throw new Error('Falha');
-      setOrigens(await response.json());
-    } catch (error) { toast.error("Erro ao carregar origens."); }
-  }
+    } catch (err) {
+      console.error("Erro ao carregar origens:", err);
+    }
+  }, []);
 
-  useEffect(() => { carregarOrigens(); }, []);
+  useEffect(() => {
+    carregarOrigens();
+  }, [carregarOrigens]);
 
-  const handleSalvar = async (dados: FormData) => {
-    const token = getToken();
-    const isEditing = !!origemParaEditar;
-    const url = isEditing ? `${API_URL}/api/origens/${origemParaEditar.id}` : `${API_URL}/api/origens`;
-    const method = isEditing ? 'PUT' : 'POST';
+  const handleAdicionar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novaOrigem.trim()) return;
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(dados),
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/origens`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ nome: novaOrigem })
       });
-      if (!response.ok) throw new Error();
-      toast.success(`Origem ${isEditing ? 'atualizada' : 'salva'}!`);
-      setIsDialogOpen(false);
-      carregarOrigens();
-    } catch (e) { toast.error("Erro ao salvar."); }
+
+      if (res.ok) {
+        toast.success("Origem adicionada!");
+        setNovaOrigem("");
+        carregarOrigens();
+      }
+    } catch (err) {
+      toast.error("Erro ao adicionar.");
+      console.error(err);
+    }
   };
 
-  const handleDeletar = async (id: number) => {
+  const handleExcluir = async (id: number) => {
     if (!confirm("Excluir esta origem?")) return;
     try {
-      const response = await fetch(`${API_URL}/api/origens/${id}`, {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_URL}/api/origens/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error();
-      setOrigens(origens.filter((o) => o.id !== id));
-      toast.success("Excluída!");
-    } catch (e) { toast.error("Erro ao excluir."); }
+      if (res.ok) {
+        toast.success("Excluída.");
+        carregarOrigens();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" asChild>
-            <Link href="/admin"><ArrowLeft className="h-4 w-4" /><span className="sr-only">Voltar</span></Link>
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Origens</h1>
-        </div>
-        <Button onClick={() => { setOrigemParaEditar(null); setIsDialogOpen(true); }}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Origem
-        </Button>
-      </div>
+    <div className="p-8 space-y-6">
+      <h1 className="text-2xl font-bold">Gerenciar Origens</h1>
       <Card>
-        <CardHeader><CardTitle>Origens ({origens.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Nova Origem</CardTitle></CardHeader>
         <CardContent>
-          <div className="relative w-full overflow-auto">
-            <Table>
-              <TableHeader><TableRow><TableHead>Ações</TableHead><TableHead>Nome</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {origens.map((origem) => (
-                  <TableRow key={origem.id}>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setOrigemParaEditar(origem); setIsDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeletar(origem.id)} className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>{origem.nome || '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <form onSubmit={handleAdicionar} className="flex gap-4 items-end">
+            <div className="grid gap-2 flex-1">
+              <Label htmlFor="nome">Nome da Origem</Label>
+              <Input id="nome" value={novaOrigem} onChange={(e) => setNovaOrigem(e.target.value)} placeholder="Ex: Porto de Santos" />
+            </div>
+            <Button type="submit"><Plus className="mr-2 h-4 w-4" /> Adicionar</Button>
+          </form>
         </CardContent>
       </Card>
-      <OrigemDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} onSave={handleSalvar} initialData={origemParaEditar} />
-    </main>
+
+      <Card>
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {origens.map((o) => (
+                <TableRow key={o.id}>
+                  <TableCell className="font-medium">{o.nome}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => handleExcluir(o.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
