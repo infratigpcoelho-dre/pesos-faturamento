@@ -14,9 +14,9 @@ interface Origem {
   nome: string;
 }
 
-const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
-    ? 'http://localhost:3001' 
-    : '/api';
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? 'http://localhost:3001'
+    : 'https://pesos-faturamento.vercel.app'; 
 
 export default function GerenciarOrigens() {
   const [origens, setOrigens] = useState<Origem[]>([]);

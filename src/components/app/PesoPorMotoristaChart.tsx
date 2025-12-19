@@ -1,88 +1,47 @@
-// Arquivo: src/components/app/PesoPorMotoristaChart.tsx (CORRIGIDO)
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { toast } from "sonner";
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
-
-type DadosPeso = {
+interface DadosGrafico {
   motorista: string;
   total_peso: number;
-};
+}
 
-// ****** MUDANÇA AQUI ******
-// Definimos o tipo de dados que vem da API
-// (O PostgreSQL pode retornar números como strings, por isso 'string | number')
-type ApiData = {
-  motorista: string;
-  total_peso: string | number;
-};
-// ****** FIM DA MUDANÇA ******
+// URL Inteligente para os Gráficos
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+    ? 'http://localhost:3001' 
+    : ''; // Na Vercel, o rewrites redireciona /api automaticamente
 
 export function PesoPorMotoristaChart() {
-  const [data, setData] = useState<DadosPeso[]>([]);
+  const [data, setData] = useState<DadosGrafico[]>([]);
 
   useEffect(() => {
-    async function carregarDados() {
-      const token = localStorage.getItem('authToken');
-      if (!token) return; 
-
+    const carregarDados = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/analytics/peso-por-motorista`, {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_URL}/api/analytics/peso-por-motorista`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!response.ok) {
-          throw new Error('Falha ao buscar dados do gráfico');
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
         }
-        
-        const dadosApi = await response.json();
-        
-        // ****** MUDANÇA AQUI (removemos o 'any') ******
-        const dadosFormatados = dadosApi.map((item: ApiData) => ({
-          motorista: item.motorista,
-          total_peso: Number(item.total_peso) // Garantimos que é um número
-        }));
-        setData(dadosFormatados);
-
       } catch (error) {
-        toast.error("Erro ao carregar dados do gráfico de motoristas.");
-        console.error(error);
+        console.error("Erro ao carregar gráfico de peso:", error);
       }
-    }
+    };
     carregarDados();
   }, []);
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
+    <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis 
-          dataKey="motorista" 
-          stroke="#888888" 
-          fontSize={12} 
-          tickLine={false} 
-          axisLine={false} 
-          interval={0} 
-          angle={-30} 
-          textAnchor="end" 
-          height={70} 
-        />
-        <YAxis
-          stroke="#888888"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `${value} t`} // Já está em Toneladas
-        />
-        <Tooltip
-          cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: number) => [`${(value).toLocaleString('pt-BR')} t`, 'Peso Total']} // Já está em Toneladas
-        />
-        <Bar dataKey="total_peso" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Peso Total" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="motorista" />
+        <YAxis />
+        <Tooltip formatter={(value: number) => `${value.toLocaleString()} Ton`} />
+        <Bar dataKey="total_peso" fill="#2563eb" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -1,90 +1,47 @@
-// Arquivo: src/components/app/ValorPorProdutoChart.tsx (CORRIGIDO)
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { toast } from "sonner";
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
-
-type DadosValor = {
+interface DadosGrafico {
   produto: string;
   total_valor: number;
-};
+}
 
-// ****** MUDANÇA AQUI ******
-// Definimos o tipo de dados que vem da API
-type ApiData = {
-  produto: string;
-  total_valor: string | number;
-};
-// ****** FIM DA MUDANÇA ******
+// URL Inteligente para os Gráficos
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+    ? 'http://localhost:3001' 
+    : ''; 
 
 export function ValorPorProdutoChart() {
-  const [data, setData] = useState<DadosValor[]>([]);
+  const [data, setData] = useState<DadosGrafico[]>([]);
 
   useEffect(() => {
-    async function carregarDados() {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-
+    const carregarDados = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/analytics/valor-por-produto`, {
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_URL}/api/analytics/valor-por-produto`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!response.ok) {
-          throw new Error('Falha ao buscar dados do gráfico');
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
         }
-        
-        const dadosApi = await response.json();
-
-        // ****** MUDANÇA AQUI (removemos o 'any') ******
-        const dadosFormatados = dadosApi.map((item: ApiData) => ({
-          produto: item.produto,
-          total_valor: Number(item.total_valor) // Garantimos que é um número
-        }));
-        setData(dadosFormatados);
-
       } catch (error) {
-        toast.error("Erro ao carregar dados do gráfico de produtos.");
-        console.error(error);
+        console.error("Erro ao carregar gráfico de valor:", error);
       }
-    }
+    };
     carregarDados();
   }, []);
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
+    <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis 
-          dataKey="produto" 
-          stroke="#888888" 
-          fontSize={12} 
-          tickLine={false} 
-          axisLine={false}
-          interval={0} 
-          angle={-30} 
-          textAnchor="end" 
-          height={70} 
-        />
-        <YAxis
-          stroke="#888888"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `R$ ${value / 1000}k`}
-        />
-        <Tooltip
-          cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }}
-          formatter={(value: number) => [
-            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 
-            'Valor Total'
-          ]}
-        />
-        <Bar dataKey="total_valor" fill="#10b981" radius={[4, 4, 0, 0]} name="Valor Total" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="produto" />
+        <YAxis />
+        <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString()}`} />
+        <Bar dataKey="total_valor" fill="#10b981" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
