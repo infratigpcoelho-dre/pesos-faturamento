@@ -1,5 +1,3 @@
-// Arquivo: src/app/page.tsx (CORREÇÃO FINAL DO ERRO '.length')
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react"; 
@@ -30,7 +28,11 @@ type Lancamento = {
 type FormData = { [key: string]: string | number; };
 
 const ITENS_POR_PAGINA = 10;
-const API_URL = 'https://api-pesos-faturamento.onrender.com'; 
+
+// FIX 1: URL INTELIGENTE (Funciona no PC e na Vercel)
+const API_URL = typeof window !== "undefined" && window.location.hostname === "localhost" 
+    ? 'http://localhost:3001' 
+    : '/api';
 
 export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -43,243 +45,135 @@ export default function Dashboard() {
   const [userPlaca, setUserPlaca] = useState<string | null>(null);
   const router = useRouter();
 
-  const getToken = () => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem('authToken');
-    }
-    return null;
-  }
+  const getToken = () => (typeof window !== "undefined" ? localStorage.getItem('authToken') : null);
 
   const handleLogout = useCallback((mostrarToast = true) => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userFullName');
-    localStorage.removeItem('userPlacaCavalo');
-    if (mostrarToast) {
-      toast.success("Você saiu com segurança.");
-    }
+    localStorage.clear();
+    if (mostrarToast) toast.success("Você saiu com segurança.");
     router.push('/login');
   }, [router]);
 
   const carregarLancamentos = useCallback(async (token: string) => {
     try {
-      const response = await fetch(`${API_URL}/lancamentos`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.status === 401 || response.status === 403) {
-        toast.error("Sua sessão expirou. Faça login novamente.");
-        handleLogout(false);
-        return;
-      }
-      if (!response.ok) throw new Error('Falha ao buscar dados da API');
+      const response = await fetch(`${API_URL}/lancamentos`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!response.ok) throw new Error('Falha ao carregar');
       const data = await response.json();
-      setLancamentos(data);
+      setLancamentos(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Erro ao carregar lançamentos:", error);
-      toast.error("Não foi possível carregar os dados. Verifique se o backend está rodando.");
+      console.error(error);
+      toast.error("Erro ao carregar dados.");
     }
-  }, [handleLogout]); 
+  }, []);
 
   useEffect(() => {
     const token = getToken();
-    const role = localStorage.getItem('userRole'); 
-    const name = localStorage.getItem('userFullName');
-    const placa = localStorage.getItem('userPlacaCavalo');
-    
-    if (!token) {
-      router.push('/login');
-    } else {
-      setUserRole(role); 
-      setUserName(name);
-      setUserPlaca(placa);
-      carregarLancamentos(token); 
-    }
+    if (!token) { router.push('/login'); return; }
+    setUserRole(localStorage.getItem('userRole'));
+    setUserName(localStorage.getItem('userFullName'));
+    setUserPlaca(localStorage.getItem('userPlacaCavalo'));
+    carregarLancamentos(token);
   }, [router, carregarLancamentos]);
 
-  const handleSalvar = async (dadosDoFormulario: FormData, arquivo: File | null) => {
-    const token = getToken();
-    if (!token) {
-      handleLogout(false);
-      return;
-    }
-    const isEditing = !!lancamentoParaEditar;
-    const idParaEditar = isEditing ? lancamentoParaEditar.id : null; 
-    const url = isEditing ? `${API_URL}/lancamentos/${idParaEditar}` : `${API_URL}/lancamentos`;
-    const method = isEditing ? 'PUT' : 'POST';
-    
-    const formData = new FormData();
-    Object.keys(dadosDoFormulario).forEach(key => {
-      if (!isEditing && key === 'id') return;
-      formData.append(key, String(dadosDoFormulario[key] ?? '')); 
-    });
-    if (arquivo) {
-      formData.append('arquivoNf', arquivo);
-    }
-
-    try {
-      const response = await fetch(url, { 
-        method: method, 
-        body: formData,
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        toast.error("Sua sessão expirou. Faça login novamente.");
-        handleLogout(false);
-        return;
-      }
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); 
-        throw new Error(errorData.error || `Erro ao ${isEditing ? 'atualizar' : 'salvar'} no backend`);
-      }
-      toast.success(`Lançamento ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
-      setIsDialogOpen(false);
-      carregarLancamentos(token); 
-    } catch (error: unknown) { 
-      console.error(`Falha ao ${isEditing ? 'editar' : 'criar'} lançamento:`, error);
-      let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o lançamento.`;
-      if (error instanceof Error) message = error.message;
-      toast.error(message);
-    }
-  };
-  
-  const handleDeletarLancamento = async (idParaDeletar: number) => {
-    const token = getToken();
-    if (!token) {
-      handleLogout(false);
-      return;
-    }
-    if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
-    try {
-      const response = await fetch(`${API_URL}/lancamentos/${idParaDeletar}`, { 
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.status === 401 || response.status === 403) {
-        toast.error("Sua sessão expirou. Faça login novamente.");
-        handleLogout(false);
-        return;
-      }
-      if (!response.ok) throw new Error('Falha ao deletar no backend');
-      setLancamentos(lancamentos.filter((lancamento) => lancamento.id !== idParaDeletar));
-      toast.success("Lançamento excluído com sucesso!");
-    } catch (error: unknown) { 
-      console.error("Erro ao deletar lançamento:", error);
-      let message = "Não foi possível excluir o lançamento.";
-      if (error instanceof Error) message = error.message;
-      toast.error(message);
-    }
-  };
-
-  const handleAbrirDialogParaCriar = () => {
-    setLancamentoParaEditar(null);
-    setIsDialogOpen(true);
-  };
-  
-  const handleAbrirDialogParaEditar = (lancamento: Lancamento) => {
-    setLancamentoParaEditar(lancamento); 
-    setIsDialogOpen(true);
+  // FIX 2: FUNÇÃO DE MOEDA (Para exibir R$)
+  const formatarMoeda = (valor: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
   const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPaginaAtual(1);
     const { name, value } = e.target;
-    setFiltros(prevState => ({ ...prevState, [name]: value }));
+    setFiltros(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleExportCSV = () => {
-    if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
+    if (lancamentosFiltrados.length === 0) return toast.warning("Sem dados.");
     const csv = Papa.unparse(lancamentosFiltrados);
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `lancamentos_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = `lancamentos_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
   const handleExportXLSX = () => {
-    if (lancamentosFiltrados.length === 0) { toast.warning("Não há dados para exportar."); return; }
-    const worksheet = XLSX.utils.json_to_sheet(lancamentosFiltrados);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos");
-    XLSX.writeFile(workbook, `lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    if (lancamentosFiltrados.length === 0) return toast.warning("Sem dados.");
+    const ws = XLSX.utils.json_to_sheet(lancamentosFiltrados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lançamentos");
+    XLSX.writeFile(wb, `lancamentos_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const formatarMoeda = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
-  };
+  const handleSalvar = async (dados: FormData, arquivo: File | null) => {
+    if (userRole === 'auditor') return toast.error("Auditores não podem salvar.");
+    const token = getToken();
+    const isEditing = !!lancamentoParaEditar;
+    const formData = new FormData();
+    Object.keys(dados).forEach(key => formData.append(key, String(dados[key] ?? '')));
+    if (arquivo) formData.append('arquivoNf', arquivo);
 
-  const formatarDataHora = (dataString: string | null) => {
-    if (!dataString) return '-';
     try {
-      if (dataString.includes('T')) {
-         const data = new Date(dataString);
-         return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      }
-      return new Date(dataString).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
-    } catch (e: unknown) {
-      return dataString; 
-    }
-  }
+      const res = await fetch(`${API_URL}/lancamentos${isEditing ? `/${lancamentoParaEditar.id}` : ''}`, {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Sucesso!");
+      setIsDialogOpen(false);
+      carregarLancamentos(token!);
+    } catch (e) { toast.error("Erro ao salvar."); }
+  };
 
-  // ****** A CORREÇÃO FINAL: Garantindo que lancamentos é um array ******
+  const handleDeletarLancamento = async (id: number) => {
+    if (userRole === 'auditor') return toast.error("Acesso negado.");
+    if (!window.confirm("Excluir?")) return;
+    try {
+      const res = await fetch(`${API_URL}/lancamentos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
+      if (res.ok) {
+        setLancamentos(prev => prev.filter(l => l.id !== id));
+        toast.success("Excluído.");
+      }
+    } catch (e) { toast.error("Erro ao excluir."); }
+  };
+
   const lancamentosFiltrados = useMemo(() => {
-    // Se lancamentos não for um array (ou for null/undefined), retorna array vazio [].
-    if (!Array.isArray(lancamentos)) return []; 
-    
-    return lancamentos.filter(lancamento => {
-      const motoristaMatch = (lancamento.motorista || '').toLowerCase().includes(filtros.motorista.toLowerCase());
-      const origemMatch = (lancamento.origem || '').toLowerCase().includes(filtros.origem.toLowerCase());
-      const produtoMatch = (lancamento.produto || '').toLowerCase().includes(filtros.produto.toLowerCase());
-      return motoristaMatch && origemMatch && produtoMatch;
-    });
+    if (!Array.isArray(lancamentos)) return [];
+    return lancamentos.filter(l => 
+      (l.motorista || '').toLowerCase().includes(filtros.motorista.toLowerCase()) &&
+      (l.origem || '').toLowerCase().includes(filtros.origem.toLowerCase()) &&
+      (l.produto || '').toLowerCase().includes(filtros.produto.toLowerCase())
+    );
   }, [lancamentos, filtros]);
 
-  // Estas linhas agora são seguras porque 'lancamentosFiltrados' é sempre '[]'
   const totalPaginas = Math.ceil(lancamentosFiltrados.length / ITENS_POR_PAGINA);
-  const indiceInicial = (paginaAtual - 1) * ITENS_POR_PAGINA;
-  const indiceFinal = indiceInicial + ITENS_POR_PAGINA;
-  const lancamentosPaginados = lancamentosFiltrados.slice(indiceInicial, indiceFinal);
+  const lancamentosPaginados = lancamentosFiltrados.slice((paginaAtual - 1) * ITENS_POR_PAGINA, paginaAtual * ITENS_POR_PAGINA);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard de Pesagem</h1>
         <div className="flex items-center gap-2">
-          
           {userRole === 'master' && (
-            <Button asChild variant="secondary">
-              <Link href="/admin">
-                <Settings className="mr-2 h-4 w-4" /> Painel Master
-              </Link>
-            </Button>
+            <Button asChild variant="secondary"><Link href="/admin"><Settings className="mr-2 h-4 w-4" /> Painel Master</Link></Button>
           )}
-
-          <Button onClick={handleAbrirDialogParaCriar}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Lançamento</Button>
-          <Button variant="outline" size="icon" onClick={() => handleLogout(true)} title="Sair do sistema">
-            <LogOut className="h-4 w-4" />
-            <span className="sr-only">Sair</span>
-          </Button>
+          {userRole !== 'auditor' && (
+            <Button onClick={() => { setLancamentoParaEditar(null); setIsDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> Novo Lançamento</Button>
+          )}
+          <Button variant="outline" size="icon" onClick={() => handleLogout()}><LogOut className="h-4 w-4" /></Button>
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card><CardHeader><CardTitle>Peso Total por Produto</CardTitle></CardHeader><CardContent><PesoPorProdutoChart data={lancamentos} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Carregamentos por Dia</CardTitle></CardHeader><CardContent><CarregamentosPorDiaChart data={lancamentos} /></CardContent></Card>
       </div>
       
       <Card>
         <CardHeader><CardTitle>Filtros</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div><Label htmlFor="filtro-motorista">Filtrar por Motorista</Label><Input id="filtro-motorista" name="motorista" placeholder="Digite o nome..." value={filtros.motorista} onChange={handleFiltroChange} /></div>
-            <div><Label htmlFor="filtro-origem">Filtrar por Origem</Label><Input id="filtro-origem" name="origem" placeholder="Digite a origem..." value={filtros.origem} onChange={handleFiltroChange} /></div>
-            <div><Label htmlFor="filtro-produto">Filtrar por Produto</Label><Input id="filtro-produto" name="produto" placeholder="Digite o produto..." value={filtros.produto} onChange={handleFiltroChange} /></div>
-          </div>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><Label>Motorista</Label><Input name="motorista" value={filtros.motorista} onChange={handleFiltroChange} /></div>
+          <div><Label>Origem</Label><Input name="origem" value={filtros.origem} onChange={handleFiltroChange} /></div>
+          <div><Label>Produto</Label><Input name="produto" value={filtros.produto} onChange={handleFiltroChange} /></div>
         </CardContent>
       </Card>
 
@@ -287,10 +181,10 @@ export default function Dashboard() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Lançamentos ({lancamentosFiltrados.length})</CardTitle>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" />Exportar Dados</Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCSV}>Exportar para CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportXLSX}>Exportar para Excel (.xlsx)</DropdownMenuItem>
+            <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> Exportar</Button></DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportCSV}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportXLSX}>Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>
@@ -299,82 +193,54 @@ export default function Dashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px] text-center sticky left-0 bg-background z-10">Ações</TableHead>
-                  <TableHead className="w-[100px]">NF (Anexo)</TableHead>
-                  <TableHead>NF (Número)</TableHead>
+                  <TableHead>Ações</TableHead>
+                  <TableHead>Nota Fiscal</TableHead>
                   <TableHead>Data</TableHead>
-                  <TableHead>Hora Postada</TableHead>
-                  <TableHead>Ticket</TableHead>
                   <TableHead>Motorista</TableHead>
-                  <TableHead>Cavalo</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead>Início Descarga</TableHead>
-                  <TableHead>Término Descarga</TableHead>
-                  <TableHead>Tempo Descarga</TableHead>
-                  <TableHead className="text-right">Peso Real (Ton)</TableHead>
-                  <TableHead className="text-right">Tarifa</TableHead>
-                  <TableHead className="text-right">Valor Frete</TableHead>
-                  <TableHead>Observação</TableHead>
+                  <TableHead className="text-right">Peso (t)</TableHead>
+                  <TableHead className="text-right">Frete Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lancamentosPaginados.map((lancamento) => (
-                  <TableRow key={lancamento.id}>
-                    <TableCell className="text-center sticky left-0 bg-background z-10">
+                {lancamentosPaginados.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleAbrirDialogParaEditar(lancamento)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeletarLancamento(lancamento.id)} className="text-red-600 focus:bg-red-100 focus:text-red-700"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        <DropdownMenuTrigger asChild disabled={userRole === 'auditor'}>
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => { setLancamentoParaEditar(l); setIsDialogOpen(true); }}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeletarLancamento(l.id)}>Excluir</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                     <TableCell>
-                      {lancamento.caminhonf ? (
-                        <Button variant="outline" size="icon" asChild>
-                          <a href={`${API_URL}/uploads/${lancamento.caminhonf}`} target="_blank" rel="noopener noreferrer" title={`Ver anexo ${lancamento.caminhonf}`}>
-                            <LinkIcon className="h-4 w-4" />
+                      {l.caminhonf && (
+                        <Button variant="outline" size="icon" asChild className="mr-2 h-7 w-7">
+                          <a href={`${API_URL}/uploads/${l.caminhonf}`} target="_blank" rel="noopener noreferrer">
+                            <LinkIcon className="h-3 w-3" />
                           </a>
                         </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
                       )}
+                      {l.nf}
                     </TableCell>
-                    <TableCell>{lancamento.nf || '-'}</TableCell>
-                    <TableCell>{lancamento.data ? new Date(lancamento.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
-                    <TableCell>{lancamento.horapostada || '-'}</TableCell>
-                    <TableCell className="font-medium">
-                      <Link href={`/lancamentos/${lancamento.id}`} className="hover:underline hover:text-primary">
-                        {lancamento.ticket || '-'}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{lancamento.motorista || '-'}</TableCell>
-                    <TableCell>{lancamento.cavalo || '-'}</TableCell>
-                    <TableCell>{lancamento.produto || '-'}</TableCell>
-                    <TableCell>{lancamento.origem || '-'}</TableCell>
-                    <TableCell>{lancamento.destino || '-'}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.iniciodescarga)}</TableCell>
-                    <TableCell>{formatarDataHora(lancamento.terminodescarga)}</TableCell>
-                    <TableCell>{lancamento.tempodescarga || '-'}</TableCell>
-                    <TableCell className="text-right">{(lancamento.pesoreal || 0).toLocaleString('pt-BR')} t</TableCell>
-                    <TableCell className="text-right">{formatarMoeda(lancamento.tarifa)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatarMoeda(lancamento.valorfrete)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{lancamento.obs || '-'}</TableCell>
+                    <TableCell>{l.data ? new Date(l.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</TableCell>
+                    <TableCell>{l.motorista}</TableCell>
+                    <TableCell className="text-right">{l.pesoreal?.toLocaleString('pt-BR')} t</TableCell>
+                    <TableCell className="text-right font-semibold">{formatarMoeda(l.valorfrete)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <span className="text-sm text-muted-foreground">Página {paginaAtual} de {totalPaginas}</span>
-            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(prev => Math.max(prev - 1, 1))} disabled={paginaAtual === 1}>Anterior</Button>
-            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(prev => Math.min(prev + 1, totalPaginas))} disabled={paginaAtual >= totalPaginas}>Próximo</Button>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(p => Math.max(p - 1, 1))} disabled={paginaAtual === 1}>Anterior</Button>
+            <Button variant="outline" size="sm" onClick={() => setPaginaAtual(p => Math.min(p + 1, totalPaginas))} disabled={paginaAtual >= totalPaginas}>Próximo</Button>
           </div>
         </CardContent>
       </Card>
-      
+
       <AddLancamentoDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}

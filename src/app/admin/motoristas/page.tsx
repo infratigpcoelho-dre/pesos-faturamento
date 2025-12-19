@@ -1,4 +1,4 @@
-// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO ERRO DE HYDRATION/WHITESPACE)
+// Arquivo: src/app/admin/motoristas/page.tsx (CORRIGIDO E PRONTO PARA NOVAS ROLES)
 
 "use client";
 
@@ -11,10 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { MotoristaDialog } from "@/components/app/MotoristaDialog"; 
+import { MotoristaDialog } from "@/components/app/MotoristaDialog";
 
-// O tipo para os dados do motorista (usuário)
-type Motorista = {
+type Utilizador = {
   id: number;
   username: string;
   nome_completo: string | null;
@@ -22,100 +21,111 @@ type Motorista = {
   cnh: string | null;
   placa_cavalo: string | null;
   placas_carretas: string | null;
-  role: string;
+  role: "motorista" | "auditor" | "master";
 };
 
-type FormData = { [key: string]: string | number | undefined; };
+type FormData = { [key: string]: string | number | undefined };
 
-const API_URL = 'https://api-pesos-faturamento.onrender.com';
+const API_URL = "http://localhost:3001";
 
 export default function GerenciarMotoristasPage() {
-  const [motoristas, setMotoristas] = useState<Motorista[]>([]);
+  const [utilizadores, setUtilizadores] = useState<Utilizador[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [motoristaParaEditar, setMotoristaParaEditar] = useState<Motorista | null>(null);
+  const [utilizadorParaEditar, setUtilizadorParaEditar] = useState<Utilizador | null>(null);
   const router = useRouter();
 
   const getToken = () => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem('authToken');
+      return localStorage.getItem("authToken");
     }
     return null;
-  }
+  };
 
-  async function carregarMotoristas() {
+  async function carregarUtilizadores() {
     try {
       const token = getToken();
-      // Rota correta (utilizadores)
+
       const response = await fetch(`${API_URL}/api/utilizadores`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.status === 401 || response.status === 403) {
         toast.error("Sessão expirou ou acesso negado.");
-        router.push('/');
+        router.push("/");
         return;
       }
-      if (!response.ok) throw new Error('Falha ao buscar utilizadores');
-      
+
+      if (!response.ok) throw new Error("Falha ao buscar utilizadores");
+
       const data = await response.json();
-      setMotoristas(data);
-    } catch (error: unknown) { 
-      console.error("Erro ao carregar motoristas:", error);
-      let message = "Não foi possível carregar os utilizadores. Verifique o console para detalhes.";
-      toast.error(message);
+      setUtilizadores(data);
+    } catch (error: unknown) {
+      console.error("Erro ao carregar utilizadores:", error);
+      toast.error("Não foi possível carregar os utilizadores. Verifique o console para detalhes.");
     }
   }
 
   useEffect(() => {
-    carregarMotoristas();
+    carregarUtilizadores();
   }, []);
 
-  const handleSalvarMotorista = async (dadosDoFormulario: FormData) => {
+  const handleSalvarUtilizador = async (dadosDoFormulario: FormData) => {
     const token = getToken();
-    const isEditing = !!motoristaParaEditar;
-    
-    const url = isEditing
-      ? `${API_URL}/api/utilizadores/${motoristaParaEditar.id}`
-      : `${API_URL}/api/utilizadores`;
-    
-    const method = isEditing ? 'PUT' : 'POST';
+    const isEditing = !!utilizadorParaEditar;
 
-    if (isEditing && (!dadosDoFormulario.password || dadosDoFormulario.password === '')) {
+    const url = isEditing
+      ? `${API_URL}/api/utilizadores/${utilizadorParaEditar.id}`
+      : `${API_URL}/api/utilizadores`;
+
+    const method = isEditing ? "PUT" : "POST";
+
+    if (isEditing && (!dadosDoFormulario.password || dadosDoFormulario.password === "")) {
       delete dadosDoFormulario.password;
+    }
+
+    if (!isEditing && !dadosDoFormulario.role) {
+      dadosDoFormulario.role = "motorista";
     }
 
     try {
       const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(dadosDoFormulario),
       });
 
       if (!response.ok) {
-         const errorData = await response.json().catch(() => ({ error: "Erro de rede ou servidor." }));
-         throw new Error(errorData.error || 'Falha ao salvar utilizador');
+        const errorData = await response.json().catch(() => ({ error: "Erro de rede ou servidor." }));
+        throw new Error(errorData.error || "Falha ao salvar utilizador");
       }
-      
-      toast.success(`Utilizador ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
-      setIsDialogOpen(false);
-      carregarMotoristas();
 
+      toast.success(`Utilizador ${isEditing ? "atualizado" : "salvo"} com sucesso!`);
+      setIsDialogOpen(false);
+      carregarUtilizadores();
     } catch (error: unknown) {
-      let message = `Não foi possível ${isEditing ? 'atualizar' : 'salvar'} o utilizador.`;
+      let message = `Não foi possível ${isEditing ? "atualizar" : "salvar"} o utilizador.`;
       if (error instanceof Error) message = error.message;
       toast.error(message);
     }
   };
 
-  const handleDeletarMotorista = async (idParaDeletar: number) => {
+  const handleDeletarUtilizador = async (idParaDeletar: number) => {
     const token = getToken();
+
     if (!window.confirm("Tem certeza que deseja excluir este utilizador? Esta ação é permanente.")) return;
+
     try {
       const response = await fetch(`${API_URL}/api/utilizadores/${idParaDeletar}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error('Falha ao deletar utilizador');
-      setMotoristas(motoristas.filter((m) => m.id !== idParaDeletar));
+
+      if (!response.ok) throw new Error("Falha ao deletar utilizador");
+
+      setUtilizadores(utilizadores.filter((m) => m.id !== idParaDeletar));
       toast.success("Utilizador excluído com sucesso!");
     } catch (error: unknown) {
       let message = "Não foi possível excluir o utilizador.";
@@ -125,12 +135,12 @@ export default function GerenciarMotoristasPage() {
   };
 
   const handleAbrirDialogParaCriar = () => {
-    setMotoristaParaEditar(null);
+    setUtilizadorParaEditar(null);
     setIsDialogOpen(true);
   };
-  
-  const handleAbrirDialogParaEditar = (motorista: Motorista) => {
-    setMotoristaParaEditar(motorista);
+
+  const handleAbrirDialogParaEditar = (utilizador: Utilizador) => {
+    setUtilizadorParaEditar(utilizador);
     setIsDialogOpen(true);
   };
 
@@ -146,6 +156,7 @@ export default function GerenciarMotoristasPage() {
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">Gerenciar Utilizadores</h1>
         </div>
+
         <Button onClick={handleAbrirDialogParaCriar}>
           <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Utilizador
         </Button>
@@ -153,7 +164,7 @@ export default function GerenciarMotoristasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Utilizadores Cadastrados ({motoristas.length})</CardTitle>
+          <CardTitle>Utilizadores Cadastrados ({utilizadores.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative w-full overflow-auto">
@@ -169,10 +180,10 @@ export default function GerenciarMotoristasPage() {
                   <TableHead>Placa Cavalo</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {/* ****** CORREÇÃO DO ERRO DE WHITESPACE/HYDRATION AQUI ****** */}
-                {motoristas.map((motorista) => (
-                  <TableRow key={motorista.id}>
+                {utilizadores.map((utilizador) => (
+                  <TableRow key={utilizador.id}>
                     <TableCell className="text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -180,32 +191,41 @@ export default function GerenciarMotoristasPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
+
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleAbrirDialogParaEditar(motorista)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeletarMotorista(motorista.id)} className="text-red-600 focus:bg-red-100 focus:text-red-700"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleAbrirDialogParaEditar(utilizador)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => handleDeletarUtilizador(utilizador.id)}
+                            className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                    <TableCell className="font-medium">{motorista.nome_completo || '-'}</TableCell>
-                    <TableCell>{motorista.username || '-'}</TableCell>
-                    <TableCell>{motorista.role || '-'}</TableCell>
-                    <TableCell>{motorista.cpf || '-'}</TableCell>
-                    <TableCell>{motorista.cnh || '-'}</TableCell>
-                    <TableCell>{motorista.placa_cavalo || '-'}</TableCell>
+
+                    <TableCell className="font-medium">{utilizador.nome_completo || "-"}</TableCell>
+                    <TableCell>{utilizador.username || "-"}</TableCell>
+                    <TableCell>{utilizador.role || "-"}</TableCell>
+                    <TableCell>{utilizador.cpf || "-"}</TableCell>
+                    <TableCell>{utilizador.cnh || "-"}</TableCell>
+                    <TableCell>{utilizador.placa_cavalo || "-"}</TableCell>
                   </TableRow>
                 ))}
-                {/* ****** FIM DA CORREÇÃO ****** */}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
-      
+
       <MotoristaDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSave={handleSalvarMotorista}
-        initialData={motoristaParaEditar}
+        onSave={handleSalvarUtilizador}
+        initialData={utilizadorParaEditar}
       />
     </main>
   );
